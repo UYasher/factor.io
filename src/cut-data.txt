@@ -1,0 +1,33 @@
+# Lines starting with a pound sign are comments
+# Format: n inputs... outputs...
+# n is an integer, specifying the number of inputs on that line
+# inputs... are whitespace-separated input strings
+# outputs... are whitespace-separated output strings
+#
+1 a
+1 b     
+1 c
+1 d     c l
+1 e
+1 f 
+1 g
+1 h
+1 i
+1 j
+1 k     l <
+1 l
+1 m     n n
+1 n
+1 o
+1 p
+1 q
+1 r
+1 s
+1 t
+1 u     l j
+1 v     \ /
+1 w     v v
+1 x     > <
+1 y
+1 z
+# 
