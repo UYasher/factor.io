@@ -7,7 +7,7 @@ import Geometry
 import Text.Read
 
 -- | Represents the internal state accumlated by a machine, after processing input
-newtype MachineState a = MachineState {runMachineState :: a -> (a, MachineState)}
+newtype MachineState a = MachineState {runMachineState :: a -> (a, MachineState a)}
 
 -- | Holds the state of a machine, as well as how it integrates into the game board
 data Machine a = Machine
@@ -17,7 +17,7 @@ data Machine a = Machine
     outputPointOffsets :: [Point]
   }
 
-rotateMatchine :: Orientation -> Machine -> Machine
+rotateMatchine :: Orientation -> Machine a -> Machine a
 rotateMatchine = undefined
 
 -- Generates a map from input strings to output strings, as specified as the contents of the argument
