@@ -75,7 +75,7 @@ s1 (*<=) s2 = \f -> case s2 f of
     Nothing -> True
     Just (_, n2) -> case s1 of
         Nothing -> False
-        Just (_, n1) -> n2 <= n1
+        Just (_, n1) -> n1 <= n2
 
 prop_complexLESimple :: Factory -> Bool
 prop_complexLessThanSimple = findComplexSolution *<= findSimpleSolution
