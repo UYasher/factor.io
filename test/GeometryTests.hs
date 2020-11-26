@@ -1,35 +1,30 @@
 module GeometryTests where
 
-
+import Geometry
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
 import Test.QuickCheck
-import Geometry
 
-instance Arbitrary Orientation
-    where
-        arbitrary = elements [North, East, South, West]
-        shrink = []
-
-instance Arbitrary Point
-    where
-        arbitrary = Point <$> arbitrary <*> arbitrary
-        shrink Point {pointX=pointX, poinyY=pointY} = do
-            x <- shrink pointX
-            y <- shrink pointY
-            return Point x y
+instance Arbitrary Point where
+  arbitrary = Point <$> arbitrary <*> arbitrary
+  shrink Point {pointX = pointX, pointY = pointY} = do
+    x <- shrink pointX
+    y <- shrink pointY
+    return $ Point x y
 
 geometryTests :: IO ()
-geometryTests = undefined -- do runTestTT (TestList [])
+geometryTests = do
+  putStrLn "Running GeometryTests.hs..."
+  aux
+  putStrLn ""
+  where
+    aux = do
+      quickCheck prop_pointAddition
+      quickCheck prop_pointSubtraction
 
--- prop_rotationsCommute :: Orientation -> Orientation -> Bool
--- prop_rotationsCommute r1 r2 = rotateOrientation r1 r2 == rotateOrientation r2 r1
+prop_pointAddition :: Point -> Point -> Bool
+prop_pointAddition p1@(Point x1 y1) p2@(Point x2 y2) =
+  (p1 +>> p2) == Point (x1 + x2) (y1 + y2)
 
--- prop_northRotationIsIdentity :: Orientation -> Bool
--- prop_northRotationIsIdentity o = rotateOrientation o North == o
-
-prop_repeatingRotationFourTimesIsIdentity :: Orientation -> Bool
-prop_repeatingRotationFourTimesIsIdentity =
-    North == foldr (.) (replicate 4 rotateOrientation) id
-
-prop_rotateThenUnrotateIsIdentity :: Orientation -> Bool
-prop_rotateThenUnrotateIsIdentity o = rotateOrientation CCW . rotateOrientation CW o == o
+prop_pointSubtraction :: Point -> Point -> Bool
+prop_pointSubtraction p1@(Point x1 y1) p2@(Point x2 y2) =
+  (p1 ->> p2) == Point (x1 - x2) (y1 - y2)

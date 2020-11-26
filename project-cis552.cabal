@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e09ac39e743826ef28fdb8d7ade4ee916295c13d82479481ca36bdb344c94b99
+-- hash: ec6655686c36e9105ef2c9bb37fb2c4624b49d83f54675e6a635ec47d206cc44
 
 name:           project-cis552
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
       Geometry
       Lib
       Machine
+      Solver
   other-modules:
       Paths_project_cis552
   hs-source-dirs:
@@ -63,7 +64,6 @@ test-suite project-cis552-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      AllTests
       FactoryEditingTests
       GeometryTests
       MachineTests
