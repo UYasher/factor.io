@@ -21,7 +21,7 @@ type Grid a = Map.Map Point a
 -- data Rotation = CW | CCW -- Clockwise/Counter-clockwise
 
 -- -- | Rotates the first argument by the second argument
--- -- | Note that 2D Rotations commute
+-- -- | Note that 2D rotations commute
 -- rotateOrientation :: Rotation -> Orientation -> Orientation
 -- rotateOrientation CW = succ
 -- rotateOrientation CCW = pred
