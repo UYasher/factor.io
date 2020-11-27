@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ec6655686c36e9105ef2c9bb37fb2c4624b49d83f54675e6a635ec47d206cc44
+-- hash: 765a57399787f876d786ff12da855f268bfb46209a422e56d29697ae03e3bd43
 
 name:           project-cis552
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       Lib
       Machine
       Solver
+      Wire
   other-modules:
       Paths_project_cis552
   hs-source-dirs:
@@ -67,6 +68,7 @@ test-suite project-cis552-test
       FactoryEditingTests
       GeometryTests
       MachineTests
+      WireTests
       Paths_project_cis552
   hs-source-dirs:
       test

@@ -15,6 +15,12 @@ type Grid a = Map.Map Point a
 (->>) :: Point -> Point -> Point
 (Point x1 y1) ->> (Point x2 y2) = Point (x1 - x2) (y1 - y2)
 
+negate :: Point -> Point
+negate (Point x y) = Point (- x) (- y)
+
+zero :: Point
+zero = Point 0 0
+
 -- data Orientation = North | East | South | West -- 0 deg, 90 deg, 180 deg, 270 deg
 --   deriving (Eq, Show, Enum)
 

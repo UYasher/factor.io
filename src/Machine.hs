@@ -1,10 +1,11 @@
 module Machine where
 
+import Data.Char
 import Data.List
 import qualified Data.Map as Map
 import Data.Maybe
 import Geometry
-import Text.Read
+import Wire
 
 -- | Represents the concept of a machine
 -- | `Op` represents an Operator that manipulates numbers to produce new numbers
@@ -18,10 +19,31 @@ data Machine
   | Sink {value :: Int}
   | Occupied
   | Wire {direction :: WireType}
+  deriving (Eq)
+
+instance Show Machine where
+  show = (: []) . machineToChar
 
 -- | Returns the graphical character to be displayed to represent the given machine
-toChar :: Machine -> Char
-toChar = undefined
+machineToChar :: Machine -> Char
+machineToChar (Op op) = opToChar op
+machineToChar (Source v) = valueToChar v
+machineToChar (Sink v) = valueToChar v
+machineToChar Occupied = 'V'
+machineToChar (Wire dir) = wireToChar dir
+
+-- | Returns the graphical character to be displayed to represent the given value
+valueToChar :: Int -> Char
+valueToChar x | 0 <= x && x <= 9 = intToDigit x
+valueToChar x | 10 <= x && x <= 35 = chr $ ord 'A' + (x - 10)
+valueToChar x | 36 <= x && x <= 61 = chr $ ord 'a' + (x - 36)
+valueToChar 62 = '!'
+valueToChar 63 = '?'
+
+-- | Returns all of the points in local coordinate space that the given Machine occupies
+allOccupied :: Machine -> [Point]
+allOccupied (Op op) = [zero] ++ inputs op ++ outputs op
+allOccupied _ = [zero]
 
 -- | `Operator`s manipulate numbers to produce new numbers
 -- | `f` is the function that defines the operator's behavior
@@ -35,43 +57,47 @@ data Operator = Operator
     opToChar :: Char
   }
 
--- | Gives the direction a wire runs, which determines what wires it connects to and propagates values to
-data WireType = Vertical | Horizontal | NE | SE | SW | NW | Overlap
-
--- | Returns True iff the given wire can propagate values to the north
-connectsToNorth :: WireType -> Bool
-connectsToNorth = undefined
-
-connectsToSouth :: WireType -> Bool
-connectsToSouth = undefined
-
-connectsToEast :: WireType -> Bool
-connectsToEast = undefined
-
-connectsToWest :: WireType -> Bool
-connectsToWest = undefined
+-- | Note that we have to rely on `opToChar`, since function equality is undecidable
+instance Eq Operator where
+  a == b = opToChar a == opToChar b
 
 -- | Helper function to create various pre-defined operators
 additionOperator :: Operator
-additionOperator = undefined
+additionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '+'
+  where
+    aux [a, b] = [(a + b) `mod` 64]
 
 subtractionOperator :: Operator
-subtractionOperator = undefined
+subtractionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '-'
+  where
+    aux [a, b] = [(a - b) `mod` 64]
 
 multiplicationOperator :: Operator
-multiplicationOperator = undefined
+multiplicationOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '*'
+  where
+    aux [a, b] = [(a * b) `mod` 64]
 
 divisionOperator :: Operator
-divisionOperator = undefined
+divisionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '/'
+  where
+    aux [a, b] = [if b == 0 then 0 else a `div` b]
 
 moduloOperator :: Operator
-moduloOperator = undefined
+moduloOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '%'
+  where
+    aux [a, b] = [if b == 0 then 0 else a `mod` b]
 
 factoringOperator :: Operator
-factoringOperator = undefined
+factoringOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'F'
+  where
+    aux [a] = if a == 0 then [0, 1] else [largestFactorLESquareRoot a, a `div` largestFactorLESquareRoot a]
+    largestFactorLESquareRoot a = head $ filter (\x -> x * x <= a && x `divides` a) [63, 62 .. 1]
+    a `divides` b = (b `div` a) * a == b
 
-duplicatingOperator :: Operator
-duplicatingOperator = undefined
+duplicationOperator :: Operator
+duplicationOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'D'
+  where
+    aux [a] = [a, a]
 
 -- -- | Represents the internal state accumlated by a machine, after processing input
 -- newtype MachineState a = MachineState {runMachineState :: a -> (a, MachineState a)}

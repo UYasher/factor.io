@@ -3,37 +3,61 @@ module MachineTests where
 import Machine
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
 import Test.QuickCheck
+import WireTests
 
 -- can we tell quickcheck that certain tests should be run with ints in a specific range?
 
 machineTests :: IO ()
 machineTests = do
-  putStrLn "Running GeometryTests.hs..."
+  putStrLn "Running MachineTests.hs..."
   aux
   putStrLn ""
   where
     aux = do
-      putStrLn "No implemented behavior"
-
---   quickCheck prop_additionOperator
---   quickCheck prop_subtractionOperator
---   quickCheck prop_multiplicationOperator
---   quickCheck prop_divisionOperator
---   quickCheck prop_moduloOperator
---   quickCheck prop_factoringOperatorGivesTwoNumbers
---   quickCheck prop_factoringOperatorMultipliesToOriginal
---   quickCheck prop_factoringOperatorGivesSmallerNumberFirst
---   quickCheck prop_factoringOperatorGivesClosestToSquareRoot
---   quickCheck prop_duplicatingOperator
+      quickCheck $ counterexample "addition" prop_additionOperator
+      quickCheck $ counterexample "subtraction" prop_subtractionOperator
+      quickCheck $ counterexample "multiplication" prop_multiplicationOperator
+      quickCheck $ counterexample "division" prop_divisionOperator
+      quickCheck $ counterexample "modulo" prop_moduloOperator
+      quickCheck $ counterexample "factoring 1" prop_factoringOperatorGivesTwoNumbers
+      quickCheck $ counterexample "factoring 2" prop_factoringOperatorMultipliesToOriginal
+      quickCheck $ counterexample "factoring 3" prop_factoringOperatorGivesSmallerNumberFirst
+      quickCheck $ counterexample "factoring 4" prop_factoringOperatorGivesClosestToSquareRoot
+      quickCheck $ counterexample "duplication" prop_duplicationOperator
 
 -- helper type for making Ints in the range 0..63
 newtype BoundedInt = BI Int
+
+int :: BoundedInt -> Int
+int (BI x) = x
 
 instance Show BoundedInt where
   show (BI x) = show x
 
 instance Arbitrary BoundedInt where
   arbitrary = BI <$> choose (0, 63)
+
+instance Arbitrary Machine where
+  arbitrary =
+    oneof
+      [ Op <$> arbitrary,
+        Source . int <$> (arbitrary :: Gen BoundedInt),
+        Sink . int <$> (arbitrary :: Gen BoundedInt),
+        return Occupied,
+        Wire <$> arbitrary
+      ]
+
+instance Arbitrary Operator where
+  arbitrary =
+    elements
+      [ additionOperator,
+        subtractionOperator,
+        multiplicationOperator,
+        divisionOperator,
+        moduloOperator,
+        factoringOperator,
+        duplicationOperator
+      ]
 
 prop_additionOperator :: BoundedInt -> BoundedInt -> Bool
 prop_additionOperator (BI x) (BI y) =
@@ -65,7 +89,7 @@ prop_moduloOperator (BI x) (BI y) =
   f moduloOperator [x, y] == [result]
   where
     result =
-      if y == 0 then 0 else x `div` y
+      if y == 0 then 0 else x `mod` y
 
 prop_factoringOperatorGivesTwoNumbers :: BoundedInt -> Bool
 prop_factoringOperatorGivesTwoNumbers (BI x) =
@@ -89,6 +113,6 @@ prop_factoringOperatorGivesClosestToSquareRoot (BI x) =
   where
     helper a = (a * a > x) || (a * (x `div` a) /= x && helper (a + 1))
 
-prop_duplicatingOperator :: BoundedInt -> Bool
-prop_duplicatingOperator (BI x) =
-  f factoringOperator [x] == [x, x]
+prop_duplicationOperator :: BoundedInt -> Bool
+prop_duplicationOperator (BI x) =
+  f duplicationOperator [x] == [x, x]

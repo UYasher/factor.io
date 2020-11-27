@@ -20,6 +20,7 @@ geometryTests = do
     aux = do
       quickCheck prop_pointAddition
       quickCheck prop_pointSubtraction
+      quickCheck prop_pointSubtractionIsAddingNegation
 
 prop_pointAddition :: Point -> Point -> Bool
 prop_pointAddition p1@(Point x1 y1) p2@(Point x2 y2) =
@@ -28,3 +29,6 @@ prop_pointAddition p1@(Point x1 y1) p2@(Point x2 y2) =
 prop_pointSubtraction :: Point -> Point -> Bool
 prop_pointSubtraction p1@(Point x1 y1) p2@(Point x2 y2) =
   (p1 ->> p2) == Point (x1 - x2) (y1 - y2)
+
+prop_pointSubtractionIsAddingNegation :: Point -> Point -> Bool
+prop_pointSubtractionIsAddingNegation p1 p2 = p1 ->> p2 == p1 +>> Geometry.negate p2
