@@ -1,10 +1,14 @@
 module Machine where
 
+import Control.Monad
 import Data.Char
 import Data.List
 import qualified Data.Map as Map
 import Data.Maybe
 import Geometry
+import Operator
+import ResourceUpdate
+import State
 import Wire
 
 -- | Represents the concept of a machine
@@ -45,59 +49,26 @@ allOccupied :: Machine -> [Point]
 allOccupied (Op op) = [zero] ++ inputs op ++ outputs op
 allOccupied _ = [zero]
 
--- | `Operator`s manipulate numbers to produce new numbers
--- | `f` is the function that defines the operator's behavior
--- | `inputs` is an array in local coordiate space of the input ports of the machine, in order
--- | `outputs` is an array in local coordinate space of the output ports of the machine, in order
--- | `opToChar` returns the graphical character to be displayed to represent the given operator
-data Operator = Operator
-  { f :: [Int] -> [Int],
-    inputs :: [Point],
-    outputs :: [Point],
-    opToChar :: Char
-  }
-
--- | Note that we have to rely on `opToChar`, since function equality is undecidable
-instance Eq Operator where
-  a == b = opToChar a == opToChar b
-
--- | Helper function to create various pre-defined operators
-additionOperator :: Operator
-additionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '+'
-  where
-    aux [a, b] = [(a + b) `mod` 64]
-
-subtractionOperator :: Operator
-subtractionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '-'
-  where
-    aux [a, b] = [(a - b) `mod` 64]
-
-multiplicationOperator :: Operator
-multiplicationOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '*'
-  where
-    aux [a, b] = [(a * b) `mod` 64]
-
-divisionOperator :: Operator
-divisionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '/'
-  where
-    aux [a, b] = [if b == 0 then 0 else a `div` b]
-
-moduloOperator :: Operator
-moduloOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '%'
-  where
-    aux [a, b] = [if b == 0 then 0 else a `mod` b]
-
-factoringOperator :: Operator
-factoringOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'F'
-  where
-    aux [a] = if a == 0 then [0, 1] else [largestFactorLESquareRoot a, a `div` largestFactorLESquareRoot a]
-    largestFactorLESquareRoot a = head $ filter (\x -> x * x <= a && x `divides` a) [63, 62 .. 1]
-    a `divides` b = (b `div` a) * a == b
-
-duplicationOperator :: Operator
-duplicationOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'D'
-  where
-    aux [a] = [a, a]
+-- -- | Tells a machine to perform a state update at the specified point.
+-- -- | (The point must be specified because machines calculate space relative to
+-- -- | their local origin, which means they don't know where they are globally.)
+-- machineToStateUpdate :: Machine -> Point -> State Resources ()
+-- machineToStateUpdate (Op op) p = do
+--   let globalInputs = map (getVert . (+>> p)) $ inputs op
+--   let globalOutputs = map (setVert . (+>> p)) $ outputs op
+--   mis <- foldr (liftM2 (:)) (return []) globalInputs
+--   case sequence mis of
+--     Nothing -> return ()
+--     Just l ->
+--       let result = f op l
+--        in foldr (\(x, y) -> ((x $ Just y) >>)) (return ()) (zip globalOutputs result)
+-- machineToStateUpdate (Source v) p = do
+--   setVert p $ Just v
+-- machineToStateUpdate (Sink _) p = do
+--   v <- getVert (p +>> Point 0 1)
+--   setVert p v
+-- machineToStateUpdate Occupied _ = return ()
+-- machineToStateUpdate (Wire dir) p = wireToStateUpdate dir p
 
 -- -- | Represents the internal state accumlated by a machine, after processing input
 -- newtype MachineState a = MachineState {runMachineState :: a -> (a, MachineState a)}

@@ -1,19 +1,19 @@
-module FactoryEditingTests where
+module BlueprintTests where
 
+import Blueprint
 import Control.Monad
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Data.Set as Set
-import FactoryEditing
 import Geometry
 import GeometryTests
 import Machine
 import MachineTests
 import Test.QuickCheck
 
-factoryEditingTests :: IO ()
-factoryEditingTests = do
-  putStrLn "Running FactoryEditingTests.hs..."
+blueprintTests :: IO ()
+blueprintTests = do
+  putStrLn "Running BlueprintTests.hs..."
   aux
   putStrLn ""
   where
@@ -36,87 +36,87 @@ factoryEditingTests = do
       quickCheck prop_removePlace
 
 -- Need arbitrary instance for factories -- need to be sophisticated about this
-instance Arbitrary Factory where
+instance Arbitrary Blueprint where
   arbitrary = do
     width <- arbitrary
     height <- arbitrary
     machines <- arbitrary :: Gen [Machine]
     fixed <- Set.fromList <$> (arbitrary :: Gen [Point])
-    let base = blankFactory width height
+    let base = blankBlueprint width height
     withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
     return withMachines {fixedPoints = fixed}
 
-prop_nonEditable :: Point -> Point -> Machine -> Factory -> Property
-prop_nonEditable p d m f =
-  not (isEditable p f)
-    ==> placeMachineAt p m f == f
-    && removeMachineAt p f == f
-    && displaceMachineAt p d f == f
+prop_nonEditable :: Point -> Point -> Machine -> Blueprint -> Property
+prop_nonEditable p d m b =
+  not (isEditable p b)
+    ==> placeMachineAt p m b == b
+    && removeMachineAt p b == b
+    && displaceMachineAt p d b == b
 
-prop_outOfBoundsIsNotEditable :: Point -> Factory -> Property
-prop_outOfBoundsIsNotEditable p f = not (isInBounds p f) ==> not (isEditable p f)
+prop_outOfBoundsIsNotEditable :: Point -> Blueprint -> Property
+prop_outOfBoundsIsNotEditable p b = not (isInBounds p b) ==> not (isEditable p b)
 
-prop_outOfBoundsIsNotAvailable :: Point -> Factory -> Property
-prop_outOfBoundsIsNotAvailable p f = not (isInBounds p f) ==> not (isAvailable p f)
+prop_outOfBoundsIsNotAvailable :: Point -> Blueprint -> Property
+prop_outOfBoundsIsNotAvailable p b = not (isInBounds p b) ==> not (isAvailable p b)
 
-prop_isAvailableBeforePlace :: Point -> Machine -> Factory -> Property
-prop_isAvailableBeforePlace p m f =
-  not (isAvailable p f) ==> f == placeMachineAt p m f
+prop_isAvailableBeforePlace :: Point -> Machine -> Blueprint -> Property
+prop_isAvailableBeforePlace p m b =
+  not (isAvailable p b) ==> b == placeMachineAt p m b
 
-prop_isAvailableBeforeRemove :: Point -> Factory -> Property
-prop_isAvailableBeforeRemove p f = isAvailable p f ==> f == removeMachineAt p f
+prop_isAvailableBeforeRemove :: Point -> Blueprint -> Property
+prop_isAvailableBeforeRemove p b = isAvailable p b ==> b == removeMachineAt p b
 
-prop_isAvailableBeforeDisplace :: Point -> Point -> Factory -> Property
-prop_isAvailableBeforeDisplace p d f = isAvailable p f ==> f == displaceMachineAt p d f
+prop_isAvailableBeforeDisplace :: Point -> Point -> Blueprint -> Property
+prop_isAvailableBeforeDisplace p d b = isAvailable p b ==> b == displaceMachineAt p d b
 
-prop_placeDoesntOverlap :: Point -> Machine -> Factory -> Property
-prop_placeDoesntOverlap p m f =
-  placeMachineAt p m f /= f
-    ==> all (\p' -> isAvailable (p' +>> p) f) (allOccupied m)
+prop_placeDoesntOverlap :: Point -> Machine -> Blueprint -> Property
+prop_placeDoesntOverlap p m b =
+  placeMachineAt p m b /= b
+    ==> all (\p' -> isAvailable (p' +>> p) b) (allOccupied m)
 
-prop_isAvailableAfterPlace :: Point -> Machine -> Factory -> Property
-prop_isAvailableAfterPlace p m f =
-  let f' = placeMachineAt p m f
-   in f' /= f ==> not $ isAvailable p f'
+prop_isAvailableAfterPlace :: Point -> Machine -> Blueprint -> Property
+prop_isAvailableAfterPlace p m b =
+  let b' = placeMachineAt p m b
+   in b' /= b ==> not $ isAvailable p b'
 
-prop_isAvailableAfterRemove :: Point -> Factory -> Property
-prop_isAvailableAfterRemove p f =
-  let f' = removeMachineAt p f
-   in f' /= f ==> isAvailable p f'
+prop_isAvailableAfterRemove :: Point -> Blueprint -> Property
+prop_isAvailableAfterRemove p b =
+  let b' = removeMachineAt p b
+   in b' /= b ==> isAvailable p b'
 
-prop_isAvailableAfterDisplace :: Point -> Point -> Factory -> Property
-prop_isAvailableAfterDisplace p d f =
-  let f' = displaceMachineAt p d f
-   in f' /= f ==> isAvailable p f'
-        || ( case getMachineAt p f of
+prop_isAvailableAfterDisplace :: Point -> Point -> Blueprint -> Property
+prop_isAvailableAfterDisplace p d b =
+  let b' = displaceMachineAt p d b
+   in b' /= b ==> isAvailable p b'
+        || ( case getMachineAt p b of
                Nothing -> False
                Just m -> Geometry.negate d `elem` Prelude.map (+>> p) (allOccupied m)
            )
 
-prop_placeDidPlace :: Point -> Machine -> Factory -> Property
-prop_placeDidPlace p m f =
-  let f' = placeMachineAt p m f
-   in f /= f' ==> Just m == getMachineAt p f'
+prop_placeDidPlace :: Point -> Machine -> Blueprint -> Property
+prop_placeDidPlace p m b =
+  let b' = placeMachineAt p m b
+   in b /= b' ==> Just m == getMachineAt p b'
 
-prop_removeDidRemove :: Point -> Factory -> Property
-prop_removeDidRemove p f =
-  let f' = removeMachineAt p f
-   in case getMachineAt p f of
+prop_removeDidRemove :: Point -> Blueprint -> Property
+prop_removeDidRemove p b =
+  let b' = removeMachineAt p b
+   in case getMachineAt p b of
         Nothing -> False ==> True
-        Just m -> True ==> all (\p' -> isAvailable (p +>> p') f') (allOccupied m)
+        Just m -> True ==> all (\p' -> isAvailable (p +>> p') b') (allOccupied m)
 
-prop_placeRemove :: Point -> Machine -> Factory -> Property
-prop_placeRemove p m f =
-  let f' = placeMachineAt p m f
-      f'' = removeMachineAt p f'
-   in f /= f' ==> f == f''
+prop_placeRemove :: Point -> Machine -> Blueprint -> Property
+prop_placeRemove p m b =
+  let b' = placeMachineAt p m b
+      b'' = removeMachineAt p b'
+   in b /= b' ==> b == b''
 
-prop_removePlace :: Point -> Factory -> Property
-prop_removePlace p f =
-  let m = getMachineAt p f
-      f' = removeMachineAt p f
-      f'' = (\m' -> placeMachineAt p m' f') <$> m
-   in isJust m ==> f'' == Just f
+prop_removePlace :: Point -> Blueprint -> Property
+prop_removePlace p b =
+  let m = getMachineAt p b
+      b' = removeMachineAt p b
+      b'' = (\m' -> placeMachineAt p m' b') <$> m
+   in isJust m ==> b'' == Just b
 
 -- -- Tests to check factory editing operations
 -- prop_place :: Point -> Machine a -> Factory a -> Bool
