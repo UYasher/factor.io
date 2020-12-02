@@ -26,7 +26,11 @@ data Machine
   deriving (Eq)
 
 instance Show Machine where
-  show = (: []) . machineToChar
+  show (Op op) = "Op " ++ [opToChar op]
+  show (Source v) = "Source " ++ show v
+  show (Sink v) = "Sink " ++ show v
+  show Occupied = "Occupied"
+  show (Wire dir) = "Wire " ++ show dir
 
 -- | Returns the graphical character to be displayed to represent the given machine
 machineToChar :: Machine -> Char
@@ -43,6 +47,14 @@ valueToChar x | 10 <= x && x <= 35 = chr $ ord 'A' + (x - 10)
 valueToChar x | 36 <= x && x <= 61 = chr $ ord 'a' + (x - 36)
 valueToChar 62 = '!'
 valueToChar 63 = '?'
+
+-- | Inverse of `valueToChar`
+charToValue :: Char -> Maybe Int
+charToValue c | isDigit c = Just $ digitToInt c
+charToValue c | isUpper c = Just $ ord c - 65 + 10
+charToValue c | isLower c = Just $ ord c - 97 + 36
+charToValue '!' = Just 62
+charToValue '?' = Just 63
 
 -- | Returns all of the points in local coordinate space that the given Machine occupies
 allOccupied :: Machine -> [Point]

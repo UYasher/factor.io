@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8299a72addcf0838a45efd964b6b16ef09c875a85ff699cae66731868a5bffe9
+-- hash: 55f973d08e898c3428202bffcc8e3c690e7299b61526ee6a68ab79e1dfd4febb
 
 name:           project-cis552
 version:        0.1.0.0
@@ -28,11 +28,13 @@ source-repository head
 library
   exposed-modules:
       Blueprint
+      BlueprintParsing
       Factory
       Geometry
       Lib
       Machine
       Operator
+      ResourcePrinting
       ResourceUpdate
       Solver
       State
@@ -69,6 +71,7 @@ test-suite project-cis552-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      BlueprintParsingTests
       BlueprintTests
       FactoryTests
       GeometryTests

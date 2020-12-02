@@ -1,4 +1,5 @@
-module Factory (Factory, makeFactory, step, isSatisfied) where
+-- module Factory (Factory, makeFactory, step, isSatisfied) where
+module Factory where
 
 import Blueprint
 import Control.Monad
@@ -49,35 +50,32 @@ processWires :: Grid Machine -> Maybe Factory
 -- there's a wire snake that connects two outputs of machines, which is illegal.
 -- Otherwise, we can sequence together the "factory" of each wire snake
 processWires g =
-  let snakes =
-        mapMaybe
-          ( \p ->
-              if isOutput g p
-                then Just $ processWireSnake g p
-                else Nothing
-          )
-          (Map.keys g)
+  let snakes = map (processWireSnake g) $ getWireSnakeHeads g
    in if anySame (snakes >>= snd) then Nothing else Just $ mapM_ fst snakes
   where
-    -- Returns `True` iff the given point could be the start of a wire snake
-    -- (ie, is a Source or is in the output of some Operator)
+    anySame :: Ord a => [a] -> Bool
+    anySame xs = Set.size (Set.fromList xs) < length xs
+
+-- | Returns a list of points that could be the start of a wire snake
+-- (ie, is below a Source or is in below the output of some Operator)
+getWireSnakeHeads :: Grid Machine -> [Point]
+getWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
+  where
     isOutput :: Grid Machine -> Point -> Bool
     isOutput g p =
       any
         ( \(p', m) -> case m of
-            Op op -> p `elem` map (+>> p') (outputs op)
-            Source _ -> p == p'
+            Op op -> p +>> Point 0 1 `elem` map (+>> p') (outputs op)
+            Source _ -> p +>> Point 0 1 == p'
             _ -> False
         )
         $ Map.toList g
-    anySame :: Ord a => [a] -> Bool
-    anySame xs = Set.size (Set.fromList xs) < length xs
 
 -- | Converts the wire snake starting at the given point into a `Factory` that
 -- makes current flow from the head of the snake to the tail. Also returns the
 -- points and layers current was assigned to, to aid illegal wire configuration detection.
 processWireSnake :: Grid Machine -> Point -> (Factory, [Coord])
-processWireSnake g p = aux g p $ p ->> Point 0 1
+processWireSnake g p = aux g (p +>> Point 0 1) p
   where
     -- Recursively follows a wire snake in the grid. The previous point is the
     -- first Point argument. The current point is the second Point argument
@@ -104,15 +102,13 @@ processWireSnake g p = aux g p $ p ->> Point 0 1
       _ -> error "impossible programming error"
 
     -- Converts a wire into a `Factory`, centered on `cur`, approached from `prev`
-    wireToFactory dir prev cur
-      | currentBends dir = do
-        let coord = coordFrom prev cur
-        x <- coordToGet coord
-        if isHoriz coord then setVert cur x else setHoriz cur x
-      | otherwise = do
-        let coord = coordFrom prev cur
-        x <- coordToGet coord
-        if isHoriz coord then setHoriz cur x else setVert cur x
+    wireToFactory dir prev cur = 
+      -- we want to read from prev, so we swap the order of arguments to coordFrom
+      let readCoord = coordFrom cur prev in do
+        x <- coordToGet readCoord
+        if currentBends dir
+          then if isHoriz readCoord then setVert cur x else setHoriz cur x
+          else if isHoriz readCoord then setHoriz cur x else setVert cur x
 
 -- | Processes all non-wire machines and converts them into a `Factory`
 processNonWires :: Grid Machine -> Factory

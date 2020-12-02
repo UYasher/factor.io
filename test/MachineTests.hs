@@ -1,10 +1,10 @@
 module MachineTests where
 
 import Machine
+import OperatorTests
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
 import Test.QuickCheck
 import WireTests
-import OperatorTests
 
 -- can we tell quickcheck that certain tests should be run with ints in a specific range?
 
@@ -15,7 +15,7 @@ machineTests = do
   putStrLn ""
   where
     aux = do
-      putStrLn "No tests yet"
+      runTestTT testValueToCharCharToValue
 
 instance Arbitrary Machine where
   arbitrary =
@@ -26,3 +26,6 @@ instance Arbitrary Machine where
         return Occupied,
         Wire <$> arbitrary
       ]
+
+testValueToCharCharToValue :: Test
+testValueToCharCharToValue = TestList [charToValue (valueToChar x) ~?= Just x | x <- [0 .. 63]]

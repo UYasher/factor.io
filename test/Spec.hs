@@ -6,6 +6,7 @@ import OperatorTests
 import ResourceUpdateTests
 import WireTests
 import FactoryTests
+import BlueprintParsingTests
 
 main :: IO ()
 main = do
@@ -16,3 +17,4 @@ main = do
   wireTests
   resourceUpdateTests
   factoryTests
+  blueprintParsingTests

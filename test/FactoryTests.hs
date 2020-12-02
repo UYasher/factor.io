@@ -10,6 +10,10 @@ import ResourceUpdate
 import State
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
 import Test.QuickCheck
+import qualified Data.Set as Set
+import BlueprintParsingTests
+import BlueprintParsing
+import Data.Maybe
 
 factoryTests :: IO ()
 factoryTests = do
@@ -22,6 +26,7 @@ factoryTests = do
       runTestTT testSourceFactory
       quickCheck prop_stepBinaryOperator
       quickCheck prop_stepUnitaryOperator
+      runTestTT testGetWireSnakeHeads
 
 foldMachinesInto :: Foldable t => Blueprint -> t (Point, Machine) -> Blueprint
 foldMachinesInto = foldr $ uncurry placeMachineAt
@@ -76,7 +81,19 @@ prop_stepUnitaryOperator op (BI x) =
         return (a, b)
       actualResult = evalState stateToRun <$> stepped2
       intermediate = Just <$> f op [x]
-      -- subscript is guaranteed to be safe, scine we have a unitary value,
+      -- subscript is guaranteed to be safe, since we have a unitary value,
       -- which always returns two values
       expectedResult = Just (head intermediate, intermediate !! 1)
    in (op == factoringOperator || op == duplicationOperator) ==> actualResult == expectedResult
+
+
+testGetWireSnakeHeads :: Test
+testGetWireSnakeHeads = TestList [
+    Set.fromList (getWireSnakeHeads g1) ~?= Set.fromList [Point 2 2, Point 4 2, Point 3 5, Point 2 7, Point 4 7],
+    Set.fromList (getWireSnakeHeads g2) ~?= Set.fromList [Point 1 0],
+    Set.fromList (getWireSnakeHeads g3) ~?= Set.fromList [Point 0 4]
+  ]
+  where
+    g1 = grid . fromJust $ stringToBlueprint blueprint1
+    g2 = grid . fromJust $ stringToBlueprint blueprint2
+    g3 = grid . fromJust $ stringToBlueprint blueprint3
