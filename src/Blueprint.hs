@@ -10,13 +10,14 @@ import State
 data Blueprint = Blueprint
   { fixedPoints :: Set.Set Point,
     grid :: Grid Machine,
+    minimumSinksToSatisfy :: Int,
     width :: Int,
     height :: Int
   }
   deriving (Eq, Show)
 
 blankBlueprint :: Int -> Int -> Blueprint
-blankBlueprint = Blueprint Set.empty Map.empty
+blankBlueprint = Blueprint Set.empty Map.empty 0
 
 -- Operations to Edit Factories
 
@@ -76,14 +77,10 @@ removeMachineAt p b@Blueprint {grid = grid}
           hof = \p' -> Map.delete (p +>> p')
        in foldr ($) g changes
 
--- Operations to step factories
-
--- step :: Factory -> Resources -> Resources
--- step Factory {grid = g} =
---   let updates = map (\(p, m) -> machineToStateUpdate m p) (Map.toList g)
---       reduced = sequence_ updates
---    in execState reduced
-
--- stepN :: Factory a -> Int -> Factory a
--- stepN f 0 = f
--- stepN f n = iterate step f !! n
+-- | Returns `True` iff the resources meet the goal specified by the blueprint
+isSatisfied :: Blueprint -> Resources -> Bool
+isSatisfied Blueprint {grid = grid, minimumSinksToSatisfy = n} r =
+  sum (map (`aux` r) $ Map.toList grid) >= n
+  where
+    aux (p, Sink x) r = if Just x == evalState (getVert p) r then 1 else 0
+    aux (_, _) _ = 0

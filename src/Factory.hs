@@ -102,13 +102,14 @@ processWireSnake g p = aux g (p +>> Point 0 1) p
       _ -> error "impossible programming error"
 
     -- Converts a wire into a `Factory`, centered on `cur`, approached from `prev`
-    wireToFactory dir prev cur = 
+    wireToFactory dir prev cur =
       -- we want to read from prev, so we swap the order of arguments to coordFrom
-      let readCoord = coordFrom cur prev in do
-        x <- coordToGet readCoord
-        if currentBends dir
-          then if isHoriz readCoord then setVert cur x else setHoriz cur x
-          else if isHoriz readCoord then setHoriz cur x else setVert cur x
+      let readCoord = coordFrom cur prev
+       in do
+            x <- coordToGet readCoord
+            if currentBends dir
+              then if isHoriz readCoord then setVert cur x else setHoriz cur x
+              else if isHoriz readCoord then setHoriz cur x else setVert cur x
 
 -- | Processes all non-wire machines and converts them into a `Factory`
 processNonWires :: Grid Machine -> Factory
@@ -138,6 +139,12 @@ processNonWires g = mapM_ aux (Map.toList g)
 step :: Factory -> Resources -> Resources
 step = execState
 
--- | Returns `True` iff the resources meet the goal specified by the blueprint
-isSatisfied :: Blueprint -> Resources -> Bool
-isSatisfied b r = undefined
+-- | Returns `True` if running the factory on the given resources produces no change
+isStabilized :: Factory -> Resources -> Bool
+isStabilized f r = r == step f r
+
+-- | Runs the factory simulation for at most `n` steps, or until it's stabilized
+stepUntilStableOrN :: Int -> Factory -> Resources -> Resources
+stepUntilStableOrN n _ r | n <= 0 = r
+stepUntilStableOrN _ f r | isStabilized f r = r
+stepUntilStableOrN n f r = stepUntilStableOrN (n - 1) f $ step f r
