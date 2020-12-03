@@ -21,25 +21,29 @@ blankBlueprint = Blueprint Set.empty Map.empty 0
 
 -- Operations to Edit Factories
 
+-- | Returns `True` iff the given point is within the bounds of the blueprint
 isInBounds :: Point -> Blueprint -> Bool
 isInBounds (Point x y) Blueprint {width = width, height = height} =
   0 <= x && x < width && 0 <= y && y < height
 
+-- | Returns `True` iff the point is in-bounds and not a fixed (ie non-user-editable) point
 isEditable :: Point -> Blueprint -> Bool
 isEditable p b@Blueprint {fixedPoints = fixedPoints} =
   isInBounds p b && p `notElem` fixedPoints
 
+-- | Returns `True` iff a one-grid machine could be placed at the point
 isAvailable :: Point -> Blueprint -> Bool
 isAvailable p b@Blueprint {grid = grid} =
-  isInBounds p b && p `Map.notMember` grid
+  isEditable p b && p `Map.notMember` grid
 
+-- | Displaces the machine at the first argument by the second argument
 displaceMachineAt :: Point -> Point -> Blueprint -> Blueprint
 displaceMachineAt p d b =
   case getMachineAt p b of
     Nothing -> b
     Just m ->
       let b' = removeMachineAt p b
-          b'' = placeMachineAt (p +>> d) m b
+          b'' = placeMachineAt (p +>> d) m b'
        in if b == b' || b' == b'' || b == b'' then b else b''
 
 getMachineAt :: Point -> Blueprint -> Maybe Machine
@@ -47,7 +51,6 @@ getMachineAt p Blueprint {grid = grid} = Map.lookup p grid
 
 placeMachineAt :: Point -> Machine -> Blueprint -> Blueprint
 placeMachineAt p m b@Blueprint {grid = grid}
-  | not $ isInBounds p b = b
   | not $ isEditable p b = b
   | any (\p' -> not $ isAvailable (p +>> p') b) (allOccupied m) = b
   | m == Occupied = b
@@ -61,7 +64,6 @@ placeMachineAt p m b@Blueprint {grid = grid}
 
 removeMachineAt :: Point -> Blueprint -> Blueprint
 removeMachineAt p b@Blueprint {grid = grid}
-  | not $ isInBounds p b = b
   | not $ isEditable p b = b
   | isAvailable p b = b
   | otherwise =
