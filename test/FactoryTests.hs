@@ -1,6 +1,10 @@
 module FactoryTests where
 
 import Blueprint
+import BlueprintParsing
+import BlueprintParsingTests
+import Data.Maybe
+import qualified Data.Set as Set
 import Factory
 import Geometry
 import Machine
@@ -10,10 +14,6 @@ import ResourceUpdate
 import State
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
 import Test.QuickCheck
-import qualified Data.Set as Set
-import BlueprintParsingTests
-import BlueprintParsing
-import Data.Maybe
 
 factoryTests :: IO ()
 factoryTests = do
@@ -65,8 +65,8 @@ prop_stepBinaryOperator op (BI x) (BI y) =
       actualResult = evalState stateToRun <$> stepped2
       -- head is guaranteed to be safe, since we have a binary operator, which
       -- always returns one value
-      expectedResult = Just $ Just $ head $ f op [x, y]
-   in (op /= factoringOperator && op /= duplicationOperator) ==> actualResult == expectedResult
+      expectedResult = Just $ Just $ head $ opFunc op [x, y]
+   in (op /= Factor && op /= Duplicate) ==> actualResult == expectedResult
 
 prop_stepUnitaryOperator :: Operator -> BoundedInt -> Property
 prop_stepUnitaryOperator op (BI x) =
@@ -80,19 +80,19 @@ prop_stepUnitaryOperator op (BI x) =
         b <- getVert $ Point 2 1
         return (a, b)
       actualResult = evalState stateToRun <$> stepped2
-      intermediate = Just <$> f op [x]
+      intermediate = Just <$> opFunc op [x]
       -- subscript is guaranteed to be safe, since we have a unitary value,
       -- which always returns two values
       expectedResult = Just (head intermediate, intermediate !! 1)
-   in (op == factoringOperator || op == duplicationOperator) ==> actualResult == expectedResult
-
+   in (op == Factor || op == Duplicate) ==> actualResult == expectedResult
 
 testGetWireSnakeHeads :: Test
-testGetWireSnakeHeads = TestList [
-    Set.fromList (getWireSnakeHeads g1) ~?= Set.fromList [Point 2 2, Point 4 2, Point 3 5, Point 2 7, Point 4 7],
-    Set.fromList (getWireSnakeHeads g2) ~?= Set.fromList [Point 1 0],
-    Set.fromList (getWireSnakeHeads g3) ~?= Set.fromList [Point 0 4]
-  ]
+testGetWireSnakeHeads =
+  TestList
+    [ Set.fromList (getWireSnakeHeads g1) ~?= Set.fromList [Point 2 2, Point 4 2, Point 3 5, Point 2 7, Point 4 7],
+      Set.fromList (getWireSnakeHeads g2) ~?= Set.fromList [Point 1 0],
+      Set.fromList (getWireSnakeHeads g3) ~?= Set.fromList [Point 0 4]
+    ]
   where
     g1 = grid . fromJust $ stringToBlueprint blueprint1
     g2 = grid . fromJust $ stringToBlueprint blueprint2

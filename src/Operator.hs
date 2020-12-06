@@ -2,56 +2,52 @@ module Operator where
 
 import Geometry
 
--- | `Operator`s manipulate numbers to produce new numbers
--- | `f` is the function that defines the operator's behavior
--- | `inputs` is an array in local coordiate space of the input ports of the machine, in order
--- | `outputs` is an array in local coordinate space of the output ports of the machine, in order
--- | `opToChar` returns the graphical character to be displayed to represent the given operator
-data Operator = Operator
-  { f :: [Int] -> [Int],
-    inputs :: [Point],
-    outputs :: [Point],
-    opToChar :: Char
-  }
+-- | `Operator`'s manipulate numbers to produce new numbers. There is a fixed
+-- number, with pre-defined behavior
+data Operator = Add | Subtract | Multiply | Divide | Modulo | Factor | Duplicate
+  deriving (Eq, Show)
 
--- | Note that we have to rely on `opToChar`, since function equality is undecidable
-instance Eq Operator where
-  a == b = opToChar a == opToChar b
-
--- | Helper function to create various pre-defined operators
-additionOperator :: Operator
-additionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '+'
-  where
-    aux [a, b] = [(a + b) `mod` 64]
-
-subtractionOperator :: Operator
-subtractionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '-'
-  where
-    aux [a, b] = [(a - b) `mod` 64]
-
-multiplicationOperator :: Operator
-multiplicationOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '*'
-  where
-    aux [a, b] = [(a * b) `mod` 64]
-
-divisionOperator :: Operator
-divisionOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '/'
-  where
-    aux [a, b] = [if b == 0 then 0 else a `div` b]
-
-moduloOperator :: Operator
-moduloOperator = Operator aux [Point (-1) 0, Point 1 0] [Point 0 (-1)] '%'
-  where
-    aux [a, b] = [if b == 0 then 0 else a `mod` b]
-
-factoringOperator :: Operator
-factoringOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'F'
+-- | Converts an operator into a function that will manipulate numbers in
+-- the "correct" way. (eg, the `Add` function adds its operands)
+opFunc :: Operator -> ([Int] -> [Int])
+opFunc Add [a, b] = [(a + b) `mod` 64]
+opFunc Subtract [a, b] = [(a - b) `mod` 64]
+opFunc Multiply [a, b] = [(a * b) `mod` 64]
+opFunc Divide [a, b] = [if b == 0 then 0 else a `div` b]
+opFunc Modulo [a, b] = [if b == 0 then 0 else a `mod` b]
+opFunc Factor [a] = aux [a]
   where
     aux [a] = if a == 0 then [0, 1] else [largestFactorLESquareRoot a, a `div` largestFactorLESquareRoot a]
     largestFactorLESquareRoot a = head $ filter (\x -> x * x <= a && x `divides` a) [63, 62 .. 1]
     a `divides` b = (b `div` a) * a == b
+opFunc Duplicate [a] = [a, a]
 
-duplicationOperator :: Operator
-duplicationOperator = Operator aux [Point 0 1] [Point (-1) 0, Point 1 0] 'D'
-  where
-    aux [a] = [a, a]
+-- | Converts an operator into an array in local coordiate space of the input ports of the machine, in order
+opInputs :: Operator -> [Point]
+opInputs Add = [Point (-1) 0, Point 1 0]
+opInputs Subtract = [Point (-1) 0, Point 1 0]
+opInputs Multiply = [Point (-1) 0, Point 1 0]
+opInputs Divide = [Point (-1) 0, Point 1 0]
+opInputs Modulo = [Point (-1) 0, Point 1 0]
+opInputs Factor = [Point 0 1]
+opInputs Duplicate = [Point 0 1]
+
+-- | Converts an operator into an array in local coordiate space of the output ports of the machine, in order
+opOutputs :: Operator -> [Point]
+opOutputs Add = [Point 0 (-1)]
+opOutputs Subtract = [Point 0 (-1)]
+opOutputs Multiply = [Point 0 (-1)]
+opOutputs Divide = [Point 0 (-1)]
+opOutputs Modulo = [Point 0 (-1)]
+opOutputs Factor = [Point (-1) 0, Point 1 0]
+opOutputs Duplicate = [Point (-1) 0, Point 1 0]
+
+-- | `opToChar` returns the graphical character to be displayed to represent the given operator
+opToChar :: Operator -> Char
+opToChar Add = '+'
+opToChar Subtract = '-'
+opToChar Multiply = '*'
+opToChar Divide = '/'
+opToChar Modulo = '%'
+opToChar Factor = 'F'
+opToChar Duplicate = 'D'

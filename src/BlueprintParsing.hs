@@ -37,12 +37,12 @@ parseCharToGoal :: Char -> Maybe Machine
 parseCharToGoal c = Sink <$> charToValue c
 
 parseCharToOperator :: Char -> Maybe Machine
-parseCharToOperator '+' = Just $ Op additionOperator
-parseCharToOperator '-' = Just $ Op subtractionOperator
-parseCharToOperator '*' = Just $ Op multiplicationOperator
-parseCharToOperator '/' = Just $ Op divisionOperator
-parseCharToOperator 'F' = Just $ Op factoringOperator
-parseCharToOperator 'D' = Just $ Op divisionOperator
+parseCharToOperator '+' = Just $ Op Add
+parseCharToOperator '-' = Just $ Op Subtract
+parseCharToOperator '*' = Just $ Op Multiply
+parseCharToOperator '/' = Just $ Op Divide
+parseCharToOperator 'F' = Just $ Op Factor
+parseCharToOperator 'D' = Just $ Op Duplicate
 parseCharToOperator x = error $ "cannot parse " ++ [x] ++ " to operator"
 
 parseCharToOccupied :: Char -> Maybe Machine
@@ -59,7 +59,7 @@ stringToBlueprint s =
           w = length first - 1
           h = length body
           base = (blankBlueprint w h) {minimumSinksToSatisfy = minSinks}
-       in Just $ stbFoldBody body (stbParseHeader header) (h - 1) $ base
+       in Just $ stbFoldBody body (stbParseHeader header) (h - 1) base
 
 stbFoldBody :: [String] -> [Char -> Maybe Machine] -> Int -> Blueprint -> Blueprint
 stbFoldBody [] _ _ b = b

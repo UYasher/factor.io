@@ -1,4 +1,4 @@
--- module Factory (Factory, makeFactory, step, isSatisfied) where
+-- module Factory (Factory, makeFactory, step, isStabilized, stepUntilStableOrN) where
 module Factory where
 
 import Blueprint
@@ -65,7 +65,7 @@ getWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
     isOutput g p =
       any
         ( \(p', m) -> case m of
-            Op op -> p +>> Point 0 1 `elem` map (+>> p') (outputs op)
+            Op op -> p +>> Point 0 1 `elem` map (+>> p') (opOutputs op)
             Source _ -> p +>> Point 0 1 == p'
             _ -> False
         )
@@ -119,13 +119,13 @@ processNonWires g = mapM_ aux (Map.toList g)
     aux (p, Op op) = do
       -- since nothing can put a value on the Occupied representing the input,
       -- we have to read from one above the input
-      let globalInputs = map (getVert . (+>> (p +>> Point 0 1))) $ inputs op
-      let globalOutputs = map (setVert . (+>> p)) $ outputs op
+      let globalInputs = map (getVert . (+>> (p +>> Point 0 1))) $ opInputs op
+      let globalOutputs = map (setVert . (+>> p)) $ opOutputs op
       mis <- foldr (liftM2 (:)) (return []) globalInputs
       case sequence mis of
         Nothing -> return ()
         Just l ->
-          let result = f op l
+          let result = opFunc op l
            in foldr (\(x, y) -> ((x $ Just y) >>)) (return ()) (zip globalOutputs result)
     aux (p, Source v) = do
       setVert p $ Just v

@@ -18,8 +18,6 @@ blueprintTests = do
   putStrLn ""
   where
     aux = do
-      -- putStrLn "unimplemented"
-
       quickCheck prop_nonEditable
       quickCheck prop_outOfBoundsIsNotEditable
       quickCheck prop_outOfBoundsIsNotAvailable
@@ -46,6 +44,20 @@ instance Arbitrary Blueprint where
     withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
     return withMachines {fixedPoints = fixed}
 
+allPoints :: Blueprint -> [Point]
+allPoints b = [Point x y | x <- [0 .. width b - 1], y <- [0 .. height b - 1]]
+
+blueprintWithArea :: Gen Blueprint
+blueprintWithArea = arbitrary `suchThat` (not . Prelude.null . allPoints)
+
+blueprintWithMachines :: Gen Blueprint
+blueprintWithMachines = arbitrary `suchThat` aux
+  where
+    aux b = any (\p -> isJust $ getMachineAt p b) $ allPoints b
+
+pointWithMachine :: Blueprint -> Gen Point
+pointWithMachine b = elements (Prelude.filter (\p -> isJust $ getMachineAt p b) $ allPoints b)
+
 prop_nonEditable :: Point -> Point -> Machine -> Blueprint -> Property
 prop_nonEditable p d m b =
   not (isEditable p b)
@@ -63,60 +75,86 @@ prop_isAvailableBeforePlace :: Point -> Machine -> Blueprint -> Property
 prop_isAvailableBeforePlace p m b =
   not (isAvailable p b) ==> b == placeMachineAt p m b
 
-prop_isAvailableBeforeRemove :: Point -> Blueprint -> Property
-prop_isAvailableBeforeRemove p b = isAvailable p b ==> b == removeMachineAt p b
+prop_isAvailableBeforeRemove :: Gen Property
+prop_isAvailableBeforeRemove = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
+  return $ isAvailable p b ==> b == removeMachineAt p b
 
-prop_isAvailableBeforeDisplace :: Point -> Point -> Blueprint -> Property
-prop_isAvailableBeforeDisplace p d b = isAvailable p b ==> b == displaceMachineAt p d b
+prop_isAvailableBeforeDisplace :: Point -> Gen Property
+prop_isAvailableBeforeDisplace d = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
+  return $ isAvailable p b ==> b == displaceMachineAt p d b
 
-prop_placeDoesntOverlap :: Point -> Machine -> Blueprint -> Property
-prop_placeDoesntOverlap p m b =
-  placeMachineAt p m b /= b
-    ==> all (\p' -> isAvailable (p' +>> p) b) (allOccupied m)
+prop_placeDoesntOverlap :: Machine -> Gen Property
+prop_placeDoesntOverlap m = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
+  return $
+    placeMachineAt p m b /= b
+      ==> all (\p' -> isAvailable (p' +>> p) b) (allOccupied m)
 
-prop_isAvailableAfterPlace :: Point -> Machine -> Blueprint -> Property
-prop_isAvailableAfterPlace p m b =
+prop_isAvailableAfterPlace :: Machine -> Gen Property
+prop_isAvailableAfterPlace m = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
   let b' = placeMachineAt p m b
-   in b' /= b ==> not $ isAvailable p b'
+  return $ b' /= b ==> not $ isAvailable p b'
 
-prop_isAvailableAfterRemove :: Point -> Blueprint -> Property
-prop_isAvailableAfterRemove p b =
+prop_isAvailableAfterRemove :: Gen Property
+prop_isAvailableAfterRemove = do
+  b <- blueprintWithMachines
+  p <- pointWithMachine b
   let b' = removeMachineAt p b
-   in b' /= b ==> isAvailable p b'
+  return $ b' /= b ==> isAvailable p b'
 
-prop_isAvailableAfterDisplace :: Point -> Point -> Blueprint -> Property
-prop_isAvailableAfterDisplace p d b =
+prop_isAvailableAfterDisplace :: Point -> Gen Property
+prop_isAvailableAfterDisplace d = do
+  b <- blueprintWithMachines
+  p <- pointWithMachine b
   let b' = displaceMachineAt p d b
-   in b' /= b ==> isAvailable p b'
-        || ( case getMachineAt p b of
-               Nothing -> False
-               Just m -> Geometry.negate d `elem` Prelude.map (+>> p) (allOccupied m)
-           )
+  return $
+    b' /= b ==> isAvailable p b'
+      || ( case getMachineAt p b of
+             Nothing -> False
+             Just Occupied -> True
+             Just m -> Geometry.negate d `elem` allOccupied m
+         )
 
-prop_placeDidPlace :: Point -> Machine -> Blueprint -> Property
-prop_placeDidPlace p m b =
+prop_placeDidPlace :: Machine -> Gen Property
+prop_placeDidPlace m = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
   let b' = placeMachineAt p m b
-   in b /= b' ==> Just m == getMachineAt p b'
+  return $ b /= b' ==> Just m == getMachineAt p b'
 
-prop_removeDidRemove :: Point -> Blueprint -> Property
-prop_removeDidRemove p b =
+prop_removeDidRemove :: Gen Property
+prop_removeDidRemove = do
+  b <- blueprintWithMachines
+  p <- pointWithMachine b
   let b' = removeMachineAt p b
-   in case getMachineAt p b of
-        Nothing -> False ==> True
-        Just m -> True ==> all (\p' -> isAvailable (p +>> p') b') (allOccupied m)
+  case getMachineAt p b of
+    Nothing -> return $ False ==> True
+    Just Occupied -> return $ False ==> True
+    Just m -> return $ True ==> all (\p' -> isAvailable (p +>> p') b') (allOccupied m)
 
-prop_placeRemove :: Point -> Machine -> Blueprint -> Property
-prop_placeRemove p m b =
+prop_placeRemove :: Machine -> Gen Property
+prop_placeRemove m = do
+  b <- blueprintWithArea
+  p <- elements $ allPoints b
   let b' = placeMachineAt p m b
-      b'' = removeMachineAt p b'
-   in b /= b' ==> b == b''
+  let b'' = removeMachineAt p b'
+  return $ b /= b' ==> b == b''
 
-prop_removePlace :: Point -> Blueprint -> Property
-prop_removePlace p b =
+prop_removePlace :: Gen Property
+prop_removePlace = do
+  b <- blueprintWithMachines
+  p <- pointWithMachine b
   let m = getMachineAt p b
-      b' = removeMachineAt p b
-      b'' = (\m' -> placeMachineAt p m' b') <$> m
-   in isJust m ==> b'' == Just b
+  let b' = removeMachineAt p b
+  let b'' = (\m' -> placeMachineAt p m' b') <$> m
+  return $ isJust m ==> b'' == Just b
 
 -- -- Tests to check factory editing operations
 -- prop_place :: Point -> Machine a -> Factory a -> Bool

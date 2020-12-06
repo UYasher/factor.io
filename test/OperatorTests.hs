@@ -40,67 +40,64 @@ instance Arbitrary BoundedInt where
 instance Arbitrary Operator where
   arbitrary =
     elements
-      [ additionOperator,
-        subtractionOperator,
-        multiplicationOperator,
-        divisionOperator,
-        moduloOperator,
-        factoringOperator,
-        duplicationOperator
+      [ Add,
+        Subtract,
+        Multiply,
+        Divide,
+        Modulo,
+        Factor,
+        Duplicate
       ]
-
-instance Show Operator where
-  show = show . opToChar
 
 prop_additionOperator :: BoundedInt -> BoundedInt -> Bool
 prop_additionOperator (BI x) (BI y) =
-  f additionOperator [x, y] == [result]
+  opFunc Add [x, y] == [result]
   where
     result = (x + y) `mod` 64
 
 prop_subtractionOperator :: BoundedInt -> BoundedInt -> Bool
 prop_subtractionOperator (BI x) (BI y) =
-  f subtractionOperator [x, y] == [result]
+  opFunc Subtract [x, y] == [result]
   where
     result = if x > y then x - y else (64 + x - y) `mod` 64
 
 prop_multiplicationOperator :: BoundedInt -> BoundedInt -> Bool
 prop_multiplicationOperator (BI x) (BI y) =
-  f multiplicationOperator [x, y] == [result]
+  opFunc Multiply [x, y] == [result]
   where
     result = (x * y) `mod` 64
 
 prop_divisionOperator :: BoundedInt -> BoundedInt -> Bool
 prop_divisionOperator (BI x) (BI y) =
-  f divisionOperator [x, y] == [result]
+  opFunc Divide [x, y] == [result]
   where
     result =
       if y == 0 then 0 else x `div` y
 
 prop_moduloOperator :: BoundedInt -> BoundedInt -> Bool
 prop_moduloOperator (BI x) (BI y) =
-  f moduloOperator [x, y] == [result]
+  opFunc Modulo [x, y] == [result]
   where
     result =
       if y == 0 then 0 else x `mod` y
 
 prop_factoringOperatorGivesTwoNumbers :: BoundedInt -> Bool
 prop_factoringOperatorGivesTwoNumbers (BI x) =
-  length (f factoringOperator [x]) == 2
+  length (opFunc Factor [x]) == 2
 
 prop_factoringOperatorMultipliesToOriginal :: BoundedInt -> Bool
 prop_factoringOperatorMultipliesToOriginal (BI x) =
-  product (f factoringOperator [x]) == x
+  product (opFunc Factor [x]) == x
 
 prop_factoringOperatorGivesSmallerNumberFirst :: BoundedInt -> Bool
 prop_factoringOperatorGivesSmallerNumberFirst (BI x) =
-  case f factoringOperator [x] of
+  case opFunc Factor [x] of
     [a, b] -> a <= b
     _ -> error "impossible"
 
 prop_factoringOperatorGivesClosestToSquareRoot :: BoundedInt -> Bool
 prop_factoringOperatorGivesClosestToSquareRoot (BI x) =
-  case f factoringOperator [x] of
+  case opFunc Factor [x] of
     (a : _) -> helper (a + 1)
     _ -> error "impossible"
   where
@@ -108,4 +105,4 @@ prop_factoringOperatorGivesClosestToSquareRoot (BI x) =
 
 prop_duplicationOperator :: BoundedInt -> Bool
 prop_duplicationOperator (BI x) =
-  f duplicationOperator [x] == [x, x]
+  opFunc Duplicate [x] == [x, x]

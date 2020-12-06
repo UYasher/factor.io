@@ -58,7 +58,7 @@ charToValue '?' = Just 63
 
 -- | Returns all of the points in local coordinate space that the given Machine occupies
 allOccupied :: Machine -> [Point]
-allOccupied (Op op) = [zero] ++ inputs op ++ outputs op
+allOccupied (Op op) = [zero] ++ opInputs op ++ opOutputs op
 allOccupied _ = [zero]
 
 -- -- | Tells a machine to perform a state update at the specified point.
