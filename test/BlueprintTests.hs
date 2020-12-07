@@ -13,6 +13,7 @@ import MachineTests
 import Operator
 import ResourceUpdate
 import Test.QuickCheck
+import Wire
 
 blueprintTests :: IO ()
 blueprintTests = do
@@ -52,24 +53,40 @@ blueprintOfOps = do
   return withMachines {fixedPoints = fixed}
 
 openOutputs :: Blueprint -> [Point]
-openOutputs b@Blueprint {grid = g, width = w, height = h} = os
+openOutputs b@Blueprint {grid = g, width = w, height = h} = filteredOutputList
   where
     r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
-    isOperation m = case m of
-      Op _ -> undefined
-      _ -> undefined
-    ops = Map.keys $ Map.filter isOperation g
-    os = undefined -- Map.mapWithKey (\p m -> opInputs m and check if they're filled and not all my outputs are out wires) ops
-    outputsFilled r@Resources {vertical = v} p m = all (\q -> isJust $ Map.lookup q v) $ Prelude.map (+>> p) (Operator.opInputs m)
+    isOp m = case m of
+      Op _ -> True
+      _ -> False
+    ops = Map.filter isOp g
+    outputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opOutputs . op) ops)
+    isMakingResource p = isJust $ Map.lookup p (vertical r)
+    connectsToWire p = case Map.lookup (p +>> Point 0 (-1)) g of
+      Just w@(Wire _) -> connectsToNorth $ direction w
+      _ -> False
+    filteredOutputList = Prelude.filter (\p -> isMakingResource p && (not . connectsToWire) p) outputList
 
 openInputs :: Blueprint -> [Point]
-openInputs = undefined
+openInputs b@Blueprint {grid = g, width = w, height = h} = filteredInputList
+  where
+    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
+    isOp m = case m of
+      Op _ -> True
+      _ -> False
+    ops = Map.filter isOp g
+    inputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opInputs . op) ops)
+    isGettingResource p = isJust $ Map.lookup (p +>> Point 0 1) (vertical r) -- make sure this detects resources going to input correctly
+    filteredInputList = Prelude.filter isGettingResource inputList
 
 placeSinksAtOpenOutputs :: Blueprint -> Blueprint
-placeSinksAtOpenOutputs = undefined
+placeSinksAtOpenOutputs b@Blueprint {width = w, height = h} = Prelude.foldr ($) b placeSinkCmds
+  where
+    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
+    placeSinkCmds = Prelude.map (\p -> placeMachineAt (p +>> Point 0 1) (Source . fromJust . fromJust . Map.lookup p $ vertical r)) (openOutputs b)
 
-addSource :: Point -> Blueprint -> Blueprint
-addSource = undefined
+addSource :: Point -> Gen Blueprint -> Gen Blueprint
+addSource p b = do placeMachineAt p <$> (Source <$> arbitrary) <*> b
 
 connectOutputToInput :: Blueprint -> Blueprint
 connectOutputToInput = undefined
@@ -84,9 +101,9 @@ connectBlueprint b = do
           [ placeSinksAtOpenOutputs <$> b, -- Not sure these two methods make sense
             connectBlueprint $ connectOutputToInput <$> b
           ]
-      [] -> b
+      [] -> placeSinksAtOpenOutputs <$> b
     [] -> case openInputs b' of
-      p : _ -> connectBlueprint (addSource p <$> b) -- Don't we actually want a random point?
+      p : _ -> connectBlueprint (addSource p b) -- Don't we actually want a random point?
       [] -> b
 
 fixSinksAndSources :: Blueprint -> Blueprint
