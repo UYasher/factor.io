@@ -40,99 +40,116 @@ blueprintTests = do
 -- Functions to generate an arbitrary instance for a blueprint
 -- All blueprints are solvable
 
-blueprintOfOps :: Gen Blueprint
-blueprintOfOps = do
-  width <- arbitrary
-  height <- arbitrary
-  operators <- (arbitrary :: Gen [Operator]) -- maybe we should be making sure there isn't a lot of overcrowding by making this a function of width and height
-  let machines = Op <$> operators
-  fixed <- Set.fromList <$> boundedPoints width height -- not sure this is needed or if this has undesirable behavior
-  let base = blankBlueprint width height
-  let placeInBounds = placeMachineAt . wrapInBounds width height
-  withMachines <- liftM3 Prelude.foldr (placeInBounds <$> arbitrary) (return base) (return machines)
-  return withMachines {fixedPoints = fixed}
+-- getBoardResources :: Blueprint -> Resources
+-- getBoardResources b@Blueprint {height = h, width = w} = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
 
-openOutputs :: Blueprint -> [Point]
-openOutputs b@Blueprint {grid = g, width = w, height = h} = filteredOutputList
-  where
-    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
-    isOp m = case m of
-      Op _ -> True
-      _ -> False
-    ops = Map.filter isOp g
-    outputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opOutputs . op) ops)
-    isMakingResource p = isJust $ Map.lookup p (vertical r)
-    connectsToWire p = case Map.lookup (p +>> Point 0 (-1)) g of
-      Just w@(Wire _) -> connectsToNorth $ direction w
-      _ -> False
-    filteredOutputList = Prelude.filter (\p -> isMakingResource p && (not . connectsToWire) p) outputList
+-- blueprintOfOps :: Gen Blueprint
+-- blueprintOfOps = do
+--   width <- arbitrary
+--   height <- arbitrary
+--   operators <- (arbitrary :: Gen [Operator]) -- maybe we should be making sure there isn't a lot of overcrowding by making this a function of width and height
+--   let machines = Op <$> operators
+--   fixed <- Set.fromList <$> boundedPoints width height -- not sure this is needed or if this has undesirable behavior
+--   let base = blankBlueprint width height
+--   let placeInBounds = placeMachineAt . wrapInBounds width height
+--   withMachines <- liftM3 Prelude.foldr (placeInBounds <$> arbitrary) (return base) (return machines)
+--   return withMachines {fixedPoints = fixed}
 
-openInputs :: Blueprint -> [Point]
-openInputs b@Blueprint {grid = g, width = w, height = h} = filteredInputList
-  where
-    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
-    isOp m = case m of
-      Op _ -> True
-      _ -> False
-    ops = Map.filter isOp g
-    inputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opInputs . op) ops)
-    isGettingResource p = isJust $ Map.lookup (p +>> Point 0 1) (vertical r) -- make sure this detects resources going to input correctly
-    filteredInputList = Prelude.filter isGettingResource inputList
+-- openOutputs :: Blueprint -> [Point]
+-- openOutputs b@Blueprint {grid = g} = Prelude.filter (\p -> isMakingResource p && (not . connectsToWire) p) outputList
+--   where
+--     r = getBoardResources b
+--     isOp m = case m of
+--       Op _ -> True
+--       _ -> False
+--     ops = Map.filter isOp g
+--     outputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opOutputs . op) ops)
+--     isMakingResource p = isJust $ Map.lookup p (vertical r)
+--     connectsToWire p = case Map.lookup (p +>> Point 0 (-1)) g of
+--       Just w@(Wire _) -> connectsToNorth $ direction w
+--       _ -> False
 
-placeSinksAtOpenOutputs :: Blueprint -> Blueprint
-placeSinksAtOpenOutputs b@Blueprint {width = w, height = h} = Prelude.foldr ($) b placeSinkCmds
-  where
-    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
-    placeSinkCmds = Prelude.map (\p -> placeMachineAt (p +>> Point 0 1) (Source . fromJust . fromJust . Map.lookup p $ vertical r)) (openOutputs b)
+-- openInputs :: Blueprint -> [Point]
+-- openInputs b@Blueprint {grid = g} = Prelude.filter isGettingResource inputList
+--   where
+--     r = getBoardResources b
+--     isOp m = case m of
+--       Op _ -> True
+--       _ -> False
+--     ops = Map.filter isOp g
+--     inputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opInputs . op) ops)
+--     isGettingResource p = isJust $ Map.lookup (p +>> Point 0 1) (vertical r) -- make sure this detects resources going to input correctly
 
-addSource :: Point -> Gen Blueprint -> Gen Blueprint
-addSource p b = do placeMachineAt p <$> (Source <$> arbitrary) <*> b
+-- placeSinksAtOpenOutputs :: Blueprint -> Blueprint
+-- placeSinksAtOpenOutputs b = Prelude.foldr ($) b placeSinkCmds
+--   where
+--     r = getBoardResources b
+--     placeSinkCmds = Prelude.map (\p -> placeMachineAt (p +>> Point 0 1) (Source . fromJust . fromJust . Map.lookup p $ vertical r)) (openOutputs b)
 
-connectOutputToInput :: Blueprint -> Blueprint
-connectOutputToInput = undefined
+-- addSource :: Point -> Gen Blueprint -> Gen Blueprint
+-- addSource p b = do placeMachineAt p <$> (Source <$> arbitrary) <*> b
 
-connectBlueprint :: Gen Blueprint -> Gen Blueprint
-connectBlueprint b = do
-  b' <- b
-  case openOutputs b' of
-    x : xs -> case openInputs b' of
-      _ : _ ->
-        oneof
-          [ placeSinksAtOpenOutputs <$> b, -- Not sure these two methods make sense
-            connectBlueprint $ connectOutputToInput <$> b
-          ]
-      [] -> placeSinksAtOpenOutputs <$> b
-    [] -> case openInputs b' of
-      p : _ -> connectBlueprint (addSource p b) -- Don't we actually want a random point?
-      [] -> b
+-- connectOutputToInput :: Blueprint -> Point -> Point -> Blueprint
+-- connectOutputToInput = undefined
 
-fixSinksAndSources :: Blueprint -> Blueprint
-fixSinksAndSources b@Blueprint {grid = g, fixedPoints = ps} = b {fixedPoints = ps'}
-  where
-    ps' = Set.union ps (Set.fromList sinkAndSourcePoints)
-    sinkAndSourcePoints = Map.keys $ Map.filter isSinkOrSource g
-    isSinkOrSource m = case m of
-      Source _ -> True
-      Sink _ -> True
-      _ -> False
+-- -- | Finds the shortest way to add wires to a blueprint to connect an output and an input
+-- --     Grid            target    queued      visited    Nothing if we reach a dead end, otherwise the path we took to the goal
+-- bfs :: Grid Machine -> Point -> [Point] -> [Point] -> Maybe [Point]
+-- bfs _ _ [] _ = Nothing
+-- bfs g t q v = undefined
 
-removeUnfixed :: Blueprint -> Blueprint
-removeUnfixed b@Blueprint {grid = g, fixedPoints = ps} = b {grid = g'}
-  where
-    g' = Map.filterWithKey (\p _ -> p `elem` ps) g
+-- connectBlueprint :: Gen Blueprint -> Gen Blueprint
+-- connectBlueprint b = do
+--   b' <- b
+--   case openOutputs b' of
+--     xs@(_ : _) -> case openInputs b' of
+--       ys@(_ : _) ->
+--         oneof
+--           [ placeSinksAtOpenOutputs <$> b, -- Not sure these two methods make sense
+--             connectBlueprint $ connectOutputToInput <$> b <*> elements xs <*> elements ys
+--           ]
+--       [] -> placeSinksAtOpenOutputs <$> b
+--     [] -> case openInputs b' of
+--       p : _ -> connectBlueprint (addSource p b) -- Don't we actually want a random open input point?
+--       [] -> b
 
-getNumSinks :: Blueprint -> Int
-getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
-  where
-    sinkToInt p = case p of
-      Sink _ -> 1
-      _ -> 0
+-- fixSinksAndSources :: Blueprint -> Blueprint
+-- fixSinksAndSources b@Blueprint {grid = g, fixedPoints = ps} = b {fixedPoints = ps'}
+--   where
+--     ps' = Set.union ps (Set.fromList sinkAndSourcePoints)
+--     sinkAndSourcePoints = Map.keys $ Map.filter isSinkOrSource g
+--     isSinkOrSource m = case m of
+--       Source _ -> True
+--       Sink _ -> True
+--       _ -> False
+
+-- removeUnfixed :: Blueprint -> Blueprint
+-- removeUnfixed b@Blueprint {grid = g, fixedPoints = ps} = b {grid = g'}
+--   where
+--     g' = Map.filterWithKey (\p _ -> p `elem` ps) g
+
+-- getNumSinks :: Blueprint -> Int
+-- getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
+--   where
+--     sinkToInt p = case p of
+--       Sink _ -> 1
+--       _ -> 0
+
+-- instance Arbitrary Blueprint where
+--   arbitrary = do
+--     b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
+--     n <- choose (0, getNumSinks b)
+--     return b {minimumSinksToSatisfy = n}
 
 instance Arbitrary Blueprint where
   arbitrary = do
-    b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
-    n <- choose (0, getNumSinks b)
-    return b {minimumSinksToSatisfy = n}
+    width <- arbitrary
+    height <- arbitrary
+    machines <- arbitrary :: Gen [Machine]
+    fixed <- Set.fromList <$> (arbitrary :: Gen [Point])
+    let base = blankBlueprint width height
+    withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
+    return withMachines {fixedPoints = fixed}
 
 -- Utility functions for asking
 allPoints :: Blueprint -> [Point]
