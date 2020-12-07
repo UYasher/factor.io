@@ -5,10 +5,13 @@ import Control.Monad
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Data.Set as Set
+import Factory
 import Geometry
 import GeometryTests
 import Machine
 import MachineTests
+import Operator
+import ResourceUpdate
 import Test.QuickCheck
 
 blueprintTests :: IO ()
@@ -33,17 +36,88 @@ blueprintTests = do
       quickCheck prop_placeRemove
       quickCheck prop_removePlace
 
--- Need arbitrary instance for factories -- need to be sophisticated about this
+-- Functions to generate an arbitrary instance for a blueprint
+-- All blueprints are solvable
+
+blueprintOfOps :: Gen Blueprint
+blueprintOfOps = do
+  width <- arbitrary
+  height <- arbitrary
+  operators <- (arbitrary :: Gen [Operator]) -- maybe we should be making sure there isn't a lot of overcrowding by making this a function of width and height
+  let machines = Op <$> operators
+  fixed <- Set.fromList <$> boundedPoints width height -- not sure this is needed or if this has undesirable behavior
+  let base = blankBlueprint width height
+  let placeInBounds = placeMachineAt . wrapInBounds width height
+  withMachines <- liftM3 Prelude.foldr (placeInBounds <$> arbitrary) (return base) (return machines)
+  return withMachines {fixedPoints = fixed}
+
+openOutputs :: Blueprint -> [Point]
+openOutputs b@Blueprint {grid = g, width = w, height = h} = os
+  where
+    r = stepUntilStableOrN (h * w * 4) (fromJust . makeFactory $ b) emptyResources
+    isOperation m = case m of
+      Op _ -> undefined
+      _ -> undefined
+    ops = Map.keys $ Map.filter isOperation g
+    os = undefined -- Map.mapWithKey (\p m -> opInputs m and check if they're filled and not all my outputs are out wires) ops
+    outputsFilled r@Resources {vertical = v} p m = all (\q -> isJust $ Map.lookup q v) $ Prelude.map (+>> p) (Operator.opInputs m)
+
+openInputs :: Blueprint -> [Point]
+openInputs = undefined
+
+placeSinksAtOpenOutputs :: Blueprint -> Blueprint
+placeSinksAtOpenOutputs = undefined
+
+addSource :: Point -> Blueprint -> Blueprint
+addSource = undefined
+
+connectOutputToInput :: Blueprint -> Blueprint
+connectOutputToInput = undefined
+
+connectBlueprint :: Gen Blueprint -> Gen Blueprint
+connectBlueprint b = do
+  b' <- b
+  case openOutputs b' of
+    x : xs -> case openInputs b' of
+      _ : _ ->
+        oneof
+          [ placeSinksAtOpenOutputs <$> b, -- Not sure these two methods make sense
+            connectBlueprint $ connectOutputToInput <$> b
+          ]
+      [] -> b
+    [] -> case openInputs b' of
+      p : _ -> connectBlueprint (addSource p <$> b) -- Don't we actually want a random point?
+      [] -> b
+
+fixSinksAndSources :: Blueprint -> Blueprint
+fixSinksAndSources b@Blueprint {grid = g, fixedPoints = ps} = b {fixedPoints = ps'}
+  where
+    ps' = Set.union ps (Set.fromList sinkAndSourcePoints)
+    sinkAndSourcePoints = Map.keys $ Map.filter isSinkOrSource g
+    isSinkOrSource m = case m of
+      Source _ -> True
+      Sink _ -> True
+      _ -> False
+
+removeUnfixed :: Blueprint -> Blueprint
+removeUnfixed b@Blueprint {grid = g, fixedPoints = ps} = b {grid = g'}
+  where
+    g' = Map.filterWithKey (\p _ -> p `elem` ps) g
+
+getNumSinks :: Blueprint -> Int
+getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
+  where
+    sinkToInt p = case p of
+      Sink _ -> 1
+      _ -> 0
+
 instance Arbitrary Blueprint where
   arbitrary = do
-    width <- arbitrary
-    height <- arbitrary
-    machines <- arbitrary :: Gen [Machine]
-    fixed <- Set.fromList <$> (arbitrary :: Gen [Point])
-    let base = blankBlueprint width height
-    withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
-    return withMachines {fixedPoints = fixed}
+    b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
+    n <- choose (0, getNumSinks b)
+    return b {minimumSinksToSatisfy = n}
 
+-- Utility functions for asking
 allPoints :: Blueprint -> [Point]
 allPoints b = [Point x y | x <- [0 .. width b - 1], y <- [0 .. height b - 1]]
 

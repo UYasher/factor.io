@@ -11,6 +11,14 @@ instance Arbitrary Point where
     y <- shrink pointY
     return $ Point x y
 
+wrapInBounds :: Int -> Int -> Point -> Point
+wrapInBounds w h (Point x y) = Point (x `mod` w) (y `mod` h)
+
+boundedPoints :: Int -> Int -> Gen [Point]
+boundedPoints w h = do
+  points <- (arbitrary :: Gen [Point])
+  return $ wrapInBounds w h <$> points
+
 geometryTests :: IO ()
 geometryTests = do
   putStrLn "Running GeometryTests.hs..."

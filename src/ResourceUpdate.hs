@@ -1,11 +1,11 @@
-module ResourceUpdate (Resources (Resources), getHoriz, getVert, setHoriz, setVert, emptyResources) where
+module ResourceUpdate where
 
-import Control.Monad
+import Control.Monad (join)
 import Data.Map as Map
 import Geometry
 import State
 
-data Resources = Resources {horizontal :: Grid (Maybe Int), vertical :: Grid (Maybe Int)}
+data Resources = Resources {horizontal :: Grid (Maybe Int), vertical :: Grid (Maybe Int)} -- I'm not sure why this has grids of `Maybe Int` wouldn't grids of `Int` suffice?
   deriving (Eq, Show)
 
 emptyResources :: Resources

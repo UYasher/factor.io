@@ -7,7 +7,7 @@ import Factory
 import ResourcePrinting
 import ResourceUpdate
 import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
-import Test.QuickCheck
+import Test.QuickCheck ()
 
 -- can we tell quickcheck that certain tests should be run with ints in a specific range?
 
@@ -27,8 +27,8 @@ blueprintParsingTests = do
       runTestTT $ testBecomesSatisfied False $ fromJust $ stringToBlueprint unsatisfiableBlueprint7
       runTestTT $ testBecomesSatisfied True $ fromJust $ stringToBlueprint easyToSatisfyBlueprint8
 
--- uncomment to see the result of running `blueprint1` for `35` steps
--- putArr $ fromJust (stepNToStrings 35 <$> stringToBlueprint blueprint1)
+      -- uncomment to see the result of running `blueprint1` for `35` steps
+      putArr $ fromJust (stepNToStrings 35 <$> stringToBlueprint blueprint1)
 
 putArr :: [String] -> IO ()
 putArr = mapM_ putStr
