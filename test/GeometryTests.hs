@@ -12,7 +12,9 @@ instance Arbitrary Point where
     return $ Point x y
 
 wrapInBounds :: Int -> Int -> Point -> Point
-wrapInBounds w h (Point x y) = Point (x `mod` w) (y `mod` h)
+wrapInBounds w h (Point x y) = Point (x `safemod` w) (y `safemod` h)
+  where
+    m `safemod` d = if d == 0 then 0 else m `mod` d
 
 boundedPoints :: Int -> Int -> Gen [Point]
 boundedPoints w h = do
