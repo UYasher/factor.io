@@ -23,7 +23,7 @@ data Machine
   | Sink {value :: Int}
   | Occupied
   | Wire {direction :: WireType}
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show Machine where
   show (Op op) = "Op " ++ [opToChar op]
@@ -31,6 +31,10 @@ instance Show Machine where
   show (Sink v) = "Sink " ++ show v
   show Occupied = "Occupied"
   show (Wire dir) = "Wire " ++ show dir
+
+-- | Returns a list of all operator machines
+opMachines :: [Machine]
+opMachines = Op <$> [Add, Subtract, Multiply, Divide, Modulo, Factor, Duplicate]
 
 -- | Returns the graphical character to be displayed to represent the given machine
 machineToChar :: Machine -> Char

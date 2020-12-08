@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 55f973d08e898c3428202bffcc8e3c690e7299b61526ee6a68ab79e1dfd4febb
+-- hash: 6e826ad2ad05e34737ad4b4f922978276341375f70ebb8c93ab67e1fd038b837
 
 name:           project-cis552
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Ascii
       Blueprint
       BlueprintParsing
       Factory
@@ -38,6 +39,7 @@ library
       ResourceUpdate
       Solver
       State
+      UI
       Wire
   other-modules:
       Paths_project_cis552
@@ -49,6 +51,8 @@ library
     , base >=4.13 && <4.14
     , containers ==0.6.2.1
     , mtl
+    , brick
+    , vty
   default-language: Haskell2010
 
 executable project-cis552-exe
@@ -64,6 +68,8 @@ executable project-cis552-exe
     , base >=4.13 && <4.14
     , containers ==0.6.2.1
     , mtl
+    , brick
+    , vty
     , project-cis552
   default-language: Haskell2010
 
@@ -89,5 +95,7 @@ test-suite project-cis552-test
     , base >=4.13 && <4.14
     , containers ==0.6.2.1
     , mtl
+    , brick
+    , vty
     , project-cis552
   default-language: Haskell2010

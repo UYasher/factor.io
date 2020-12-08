@@ -1,6 +1,6 @@
-module Main where
+module Main
+  ( main,
+  )
+where
 
-import Lib
-
-main :: IO ()
-main = undefined
+import UI (main)
