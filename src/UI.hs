@@ -12,7 +12,7 @@ import Brick.Widgets.Core as WC
 import Control.Monad (void)
 import Factory
 import Geometry
-import Graphics.Vty (blue, green)
+import Graphics.Vty (brightBlack, brightRed, brightYellow, white)
 import Graphics.Vty as V
 import Machine
 import Operator
@@ -40,12 +40,6 @@ app =
       appStartEvent = return,
       appAttrMap = const aMap
     }
-
-aMap :: AttrMap
-aMap =
-  attrMap
-    V.defAttr
-    []
 
 boardHeight, boardWidth :: Int
 boardHeight = 15
