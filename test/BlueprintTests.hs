@@ -47,15 +47,18 @@ getBoardResources b@Blueprint {height = h, width = w} = stepUntilStableOrN (h * 
 
 blueprintOfOps :: Gen Blueprint
 blueprintOfOps = do
-  width <- abs <$> arbitrary
-  height <- abs <$> arbitrary
-  operators <- (arbitrary :: Gen [Operator]) -- maybe we should be making sure there isn't a lot of overcrowding by making this a function of width and height
+  width <- (3 +) . abs <$> arbitrary
+  height <- (3 +) . abs <$> arbitrary
+  operators <- (arbitrary `suchThat` (\l -> length l > 10) :: Gen [Operator]) -- not sure 10 is the right number. Maybe a function of height and width?
   let machines = Op <$> operators
   -- fixed <- Set.fromList <$> boundedPoints width height -- not sure this is needed or if this has undesirable behavior
   fixed <- elements [Set.empty :: Set Point]
   let base = blankBlueprint width height
-  let placeInBounds = placeMachineAt . wrapInBounds width height
-  withMachines <- liftM3 Prelude.foldr (placeInBounds <$> arbitrary) (return base) (return machines)
+  -- subtracting from and adding to the height allows us to guarantee that all inputs/outputs are reachable
+  let placeInBounds = placeMachineAt . (+>> Point 0 1) . wrapInBounds width (height - 3)
+  points <- (arbitrary `suchThat` (\l -> length l == length machines) :: Gen [Point])
+  let addCMDs = zipWith ($) (Prelude.map placeInBounds points) machines
+  let withMachines = Prelude.foldr (\m b -> m b) base addCMDs -- this only generates the arbitrary once, then tries to place everything there
   return withMachines {fixedPoints = fixed}
 
 isOp :: Machine -> Bool
@@ -68,11 +71,11 @@ openOutputs b@Blueprint {grid = g} = Prelude.filter (\p -> isMakingResource p &&
   where
     r = getBoardResources b
     ops = Map.filter isOp g
-    outputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opOutputs . op) ops)
+    outputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) ((opOutputs . op) a)) ops
     isMakingResource p = isJust $ Map.lookup p (vertical r)
     connectsToWire p = case Map.lookup (p +>> Point 0 (-1)) g of
       Just w@(Wire _) -> connectsToNorth $ direction w
-      _ -> False
+      _ -> False -- error $ "Could not find wire at location " ++ show (p +>> Point 0 (-1)) ++ " instead found " ++ show (Map.lookup (p +>> Point 0 (-1)) g)
 
 testOpenOutputs :: Test
 testOpenOutputs =
@@ -90,14 +93,16 @@ openInputs b@Blueprint {grid = g} = Prelude.filter (not . isGettingResource) inp
     r = getBoardResources b
     ops = Map.filter isOp g
     inputList = concat . Map.elems $ Map.mapWithKey (\k a -> Prelude.map (+>> k) a) (Map.map (opInputs . op) ops)
-    isGettingResource p = isJust $ Map.lookup (p +>> Point 0 1) (vertical r) -- make sure this detects resources going to input correctly
+    isGettingResource p = isJust $ Map.lookup (p +>> Point 0 1) (vertical r)
 
 testOpenInputs :: Test
 testOpenInputs =
   TestList
     [ openInputs exB0 ~?= [Point {pointX = 0, pointY = 2}, Point {pointX = 2, pointY = 2}],
       openInputs exB1 ~?= [Point {pointX = 2, pointY = 2}],
-      openInputs exB2 ~?= []
+      openInputs exB2 ~?= [],
+      openInputs exB3 ~?= [],
+      openInputs exB4 ~?= []
     ]
 
 -- Simple example blueprints to test openInputs and openOutputs
@@ -124,19 +129,19 @@ exB2 :: Blueprint
 exB2 = placeMachineAt (Point 2 3) (Source 6) exB1
 
 exB3 :: Blueprint
-exB3 = placeMachineAt (Point 2 3) (Wire Vertical) exB2
+exB3 = placeMachineAt (Point 1 0) (Wire Vertical) exB2
 
 exB4 :: Blueprint
-exB4 = placeMachineAt (Point 2 3) (Wire Horizontal) exB3
+exB4 = placeMachineAt (Point 1 0) (Wire Horizontal) exB2
 
 placeSinksAtOpenOutputs :: Blueprint -> Blueprint
 placeSinksAtOpenOutputs b = Prelude.foldr ($) b placeSinkCmds
   where
     r = getBoardResources b
-    placeSinkCmds = Prelude.map (\p -> placeMachineAt (p +>> Point 0 1) (Source . fromJust . fromJust . Map.lookup p $ vertical r)) (openOutputs b)
+    placeSinkCmds = Prelude.map (\p -> placeMachineAt (p +>> Point 0 (-1)) (Sink . fromJust . fromJust . Map.lookup p $ vertical r)) (openOutputs b)
 
-addSource :: Point -> Gen Blueprint -> Gen Blueprint
-addSource p b = do placeMachineAt p <$> (Source <$> arbitrary) <*> b
+addSourceAbove :: Point -> Gen Blueprint -> Gen Blueprint
+addSourceAbove p b = do placeMachineAt (p +>> Point 0 1) <$> (Source . (`mod` 64) <$> arbitrary) <*> b
 
 connectOutputToInput :: Blueprint -> Point -> Point -> Blueprint
 connectOutputToInput = undefined
@@ -153,13 +158,17 @@ connectBlueprint b = do
   case openOutputs b' of
     xs@(_ : _) -> case openInputs b' of
       ys@(_ : _) ->
-        oneof
-          [ placeSinksAtOpenOutputs <$> b, -- Not sure these two methods make sense
-            connectBlueprint $ connectOutputToInput <$> b <*> elements xs <*> elements ys -- Why doesn't running blueprintTests.hs seem to ever reach this line?
+        frequency
+          [ (1, placeSinksAtOpenOutputs <$> b), -- Not sure these two methods make sense
+            (10, connectBlueprint $ connectOutputToInput <$> b <*> elements xs <*> elements ys) -- Why doesn't running blueprintTests.hs seem to ever reach this line?
           ]
       [] -> placeSinksAtOpenOutputs <$> b
     [] -> case openInputs b' of
-      p : _ -> connectBlueprint (addSource p b) -- Don't we actually want a random open input point? -- never reaches this line
+      p : _ ->
+        frequency
+          [ (1, placeSinksAtOpenOutputs <$> b),
+            (10, connectBlueprint (addSourceAbove p b))
+          ] -- Don't we actually want a random open input point?
       [] -> b -- Reaches this line
 
 fixSinksAndSources :: Blueprint -> Blueprint
@@ -186,9 +195,13 @@ getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
 
 instance Arbitrary Blueprint where
   arbitrary = do
-    b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
-    n <- choose (0, getNumSinks b)
-    return b {minimumSinksToSatisfy = n}
+    -- b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
+    -- b <- fixSinksAndSources <$> connectBlueprint blueprintOfOps
+    b <- blueprintOfOps
+    b' <- connectBlueprint $ return b
+    -- For some reason, the previous line differs from doing: connectBlueprint blueprintOfOps
+    n <- choose (0, getNumSinks b')
+    return $ b' {minimumSinksToSatisfy = n}
 
 -- instance Arbitrary Blueprint where
 --   arbitrary = do
