@@ -9,22 +9,23 @@ import Brick.Widgets.Border.Style as BS
 import Brick.Widgets.Center as C
 import Brick.Widgets.Core as WC
 import Control.Monad (void)
+import Factory
 import Geometry
 import Graphics.Vty as V
 import Machine
 import Operator
-
-data Tick = Tick
+import ResourceUpdate (emptyResources)
 
 -- | We need a wrapper around the Blueprint because
 -- | we want to keep track of which machines are currently
 -- | selected by the player
 data UIState = UIState
   { blueprint :: Blueprint,
-    placeMachine :: Maybe Machine
+    placeMachine :: Maybe Machine,
+    statusString :: String
   }
 
-app :: App UIState Tick Name
+app :: App UIState () Name
 app =
   App
     { appDraw = drawUI,
@@ -44,17 +45,30 @@ main = do
   initialVty <- buildVty
   void $ customMain initialVty buildVty Nothing app b
   where
-    b = UIState (blankBlueprint 12 12) Nothing
-
-blueprint1 :: Blueprint
-blueprint1 = addFixedPoint (Point 2 2) $ blankBlueprint 11 11
+    b = UIState (blankBlueprint 12 12) Nothing "Hm.."
 
 drawUI :: UIState -> [Widget Name]
-drawUI uis = [C.center $ drawFactory uis <+> padLeft (Pad 2) (drawSideBoard uis)]
+drawUI uis = [C.center $ drawLeftBoard uis <+> drawFactory uis <+> drawSideBoard uis]
 
+-- For debugging and running
+drawLeftBoard :: UIState -> Widget Name
+drawLeftBoard UIState {statusString = s} =
+  padRight (Pad 1) $
+    withBorderStyle
+      BS.unicodeBold
+      (B.border $ clickable Run $ vLimit 3 $ hLimit 7 $ C.center $ str "Run")
+      <=> withBorderStyle BS.unicodeBold (B.borderWithLabel (str "Status") $ vLimit 3 $ hLimit 7 $ C.center $ str s)
+
+-- For item selection
 drawSideBoard :: UIState -> Widget Name
 drawSideBoard _ =
-  withBorderStyle BS.unicodeBold $ B.border $ vBox [drawMachineSelector m | m <- opMachines]
+  padLeft (Pad 2) $
+    withBorderStyle
+      BS.unicodeBold
+      (B.border $ vBox [drawMachineSelector m | m <- opMachines ++ wireMachines])
+      <=> withBorderStyle
+        BS.unicodeBold
+        (B.borderWithLabel (str "debug") $ vBox [drawMachineSelector m | m <- goalMachines])
 
 drawFactory :: UIState -> Widget Name
 drawFactory UIState {blueprint = b} =
@@ -71,10 +85,15 @@ drawCell Blueprint.Fixed = filled
 drawCell Empty = empty
 drawCell (Machine m) = drawMachine m
 
-handleEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
+handleEvent :: UIState -> BrickEvent Name () -> EventM Name (Next UIState)
 handleEvent uis (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt uis
 handleEvent uis (MouseDown (Select m) _ _ _) = continue $ uis {placeMachine = Just m}
 handleEvent uis@UIState {blueprint = b, placeMachine = Just m} (MouseUp Board (Just BLeft) l) = continue $ uis {blueprint = placeMachineAt (tf l b) m b}
+handleEvent uis@UIState {blueprint = b} (MouseUp Board (Just BRight) l) = continue $ uis {blueprint = removeMachineAt (tf l b) b}
+handleEvent uis@UIState {blueprint = b, statusString = s} (MouseUp Run (Just BLeft) _) =
+  case makeFactory b of
+    Just f -> if isSatisfied b (stepUntilStableOrN 0 f emptyResources) then continue $ uis {statusString = "Solved!"} else continue uis
+    Nothing -> continue uis
 handleEvent uis _ = continue uis
 
 aMap :: AttrMap

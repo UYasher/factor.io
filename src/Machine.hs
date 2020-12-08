@@ -36,6 +36,13 @@ instance Show Machine where
 opMachines :: [Machine]
 opMachines = Op <$> [Add, Subtract, Multiply, Divide, Modulo, Factor, Duplicate]
 
+wireMachines :: [Machine]
+wireMachines = Wire <$> [Vertical, Horizontal, NE, SE, SW, NW, Overlap]
+
+-- | Sinks and Sources. For Debugging purposes.
+goalMachines :: [Machine]
+goalMachines = [Source 1, Sink 1]
+
 -- | Returns the graphical character to be displayed to represent the given machine
 machineToChar :: Machine -> Char
 machineToChar (Op op) = opToChar op

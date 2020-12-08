@@ -6,7 +6,7 @@ import Machine
 import Operator
 import Wire
 
-data Name = Board | Select {name :: Machine}
+data Name = Board | Select {name :: Machine} | Run
   deriving (Eq, Ord)
 
 drawMachinesLeft :: Int -> Widget n
@@ -21,7 +21,10 @@ drawMachine (Op op) = drawOp (opToChar op)
 drawMachine (Wire dir) = drawWire dir
 drawMachine Occupied = drawOccupied
 drawMachine (Source n) = drawSource n
-drawMachine _ = drawGeneric
+drawMachine (Sink n) = drawSink n
+
+-- For future use
+-- drawMachine _ = drawGeneric
 
 drawOp :: Char -> Widget n
 drawOp c =
@@ -85,16 +88,15 @@ drawOccupied =
 
 drawSource :: Int -> Widget n
 drawSource n =
-  str " -++- "
-    <=> C.hCenter (str $ show n)
-    <=> str " -++- "
+  str " -ɅɅ- "
+    <=> (str "<" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str ">")
+    <=> str " -VV- "
 
 drawSink :: Int -> Widget n
 drawSink n =
-  str
-    " -00- \n\
-    \000000\n\
-    \ -00- "
+  str " -VV- "
+    <=> (str ">" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str "<")
+    <=> str " -ɅɅ- "
 
 drawGeneric :: Widget n
 drawGeneric =
@@ -113,6 +115,6 @@ filled =
 empty :: Widget n
 empty =
   str
-    "┌────┐\n\
-    \│    │\n\
-    \└────┘"
+    "      \n\
+    \      \n\
+    \      "
