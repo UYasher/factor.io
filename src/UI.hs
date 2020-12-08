@@ -53,21 +53,18 @@ drawUI :: UIState -> [Widget Name]
 drawUI uis = [C.center $ drawFactory uis <+> padLeft (Pad 2) (drawSideBoard uis)]
 
 drawSideBoard :: UIState -> Widget Name
-drawSideBoard UIState {blueprint = b} =
+drawSideBoard _ =
   withBorderStyle BS.unicodeBold $ B.border $ vBox [drawMachineSelector m | m <- opMachines]
 
-machineCount :: Widget Name
-machineCount = padLeftRight 1 $ drawOp '+' <+> padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
-
 drawFactory :: UIState -> Widget Name
-drawFactory uis =
+drawFactory UIState {blueprint = b} =
   withBorderStyle BS.unicodeBold $
     B.borderWithLabel (str "Factory") $
       clickable Board $ vBox rows
   where
-    rows = [hBox $ cellsInRow r | r <- [height (blueprint uis) - 1, height (blueprint uis) - 2 .. 0]]
-    cellsInRow y = [drawCoord $ Point x y | x <- [0 .. width (blueprint uis) - 1]]
-    drawCoord = drawCell . cellTypeAt (blueprint uis)
+    rows = [hBox $ cellsInRow r | r <- [height b - 1, height b - 2 .. 0]]
+    cellsInRow y = [drawCoord $ Point x y | x <- [0 .. width b - 1]]
+    drawCoord = drawCell . cellTypeAt b
 
 drawCell :: CellType -> Widget Name
 drawCell Blueprint.Fixed = filled
