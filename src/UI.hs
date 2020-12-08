@@ -4,6 +4,7 @@ import Ascii
 import Blueprint
 import Brick hiding (Horizontal, Vertical)
 import Brick.Types as BT hiding (Horizontal, Vertical)
+import Brick.Util (fg, on)
 import Brick.Widgets.Border as B
 import Brick.Widgets.Border.Style as BS
 import Brick.Widgets.Center as C
@@ -11,6 +12,7 @@ import Brick.Widgets.Core as WC
 import Control.Monad (void)
 import Factory
 import Geometry
+import Graphics.Vty (blue, green)
 import Graphics.Vty as V
 import Machine
 import Operator
@@ -26,6 +28,9 @@ data UIState = UIState
     statusString :: String
   }
 
+data Name = Board | Select {name :: Machine} | Run
+  deriving (Eq, Ord)
+
 app :: App UIState () Name
 app =
   App
@@ -35,6 +40,12 @@ app =
       appStartEvent = return,
       appAttrMap = const aMap
     }
+
+aMap :: AttrMap
+aMap =
+  attrMap
+    V.defAttr
+    []
 
 boardHeight, boardWidth :: Int
 boardHeight = 15
@@ -50,7 +61,7 @@ main = do
   initialVty <- buildVty
   void $ customMain initialVty buildVty Nothing app b
   where
-    b = UIState (blankBlueprint boardHeight boardWidth) Nothing "Hm.."
+    b = UIState (blankBlueprint boardHeight boardWidth) Nothing "Empty"
 
 drawUI :: UIState -> [Widget Name]
 drawUI uis = [C.center $ drawLeftBoard uis <+> drawFactory uis <+> drawSideBoard uis]
@@ -58,11 +69,13 @@ drawUI uis = [C.center $ drawLeftBoard uis <+> drawFactory uis <+> drawSideBoard
 -- For debugging and running
 drawLeftBoard :: UIState -> Widget Name
 drawLeftBoard UIState {statusString = s} =
-  padRight (Pad 1) $
-    withBorderStyle
-      BS.unicodeBold
-      (B.border $ clickable Run $ vLimit 3 $ hLimit 7 $ C.center $ str "Run")
-      <=> withBorderStyle BS.unicodeBold (B.borderWithLabel (str "Status") $ vLimit 3 $ hLimit 7 $ C.center $ str s)
+  padRight (Pad 1)
+    . withBorderStyle BS.unicodeBold
+    . B.borderWithLabel (str "Status")
+    . vLimit 3
+    . hLimit 7
+    . C.center
+    $ str s
 
 -- For item selection
 drawSideBoard :: UIState -> Widget Name
@@ -70,16 +83,20 @@ drawSideBoard _ =
   padLeft (Pad 2) $
     withBorderStyle
       BS.unicodeBold
-      (B.border $ vBox [drawMachineSelector m | m <- opMachines ++ wireMachines])
+      (B.border $ vBox [drawClickable m | m <- opMachines ++ wireMachines])
       <=> withBorderStyle
         BS.unicodeBold
-        (B.borderWithLabel (str "debug") $ vBox [drawMachineSelector m | m <- goalMachines])
+        (B.borderWithLabel (str "debug") $ vBox [drawClickable m | m <- goalMachines])
+  where
+    drawClickable m = clickable (Select m) $ drawMachineSelector m
 
 drawFactory :: UIState -> Widget Name
 drawFactory UIState {blueprint = b} =
-  withBorderStyle BS.unicodeBold $
-    B.borderWithLabel (str "Factory") $
-      clickable Board $ vBox rows
+  withAttr (attrName "colorful")
+    . withBorderStyle BS.unicodeBold
+    . B.borderWithLabel (str "Factory")
+    . clickable Board
+    $ vBox rows
   where
     rows = [hBox $ cellsInRow r | r <- [height b - 1, height b - 2 .. 0]]
     cellsInRow y = [drawCoord $ Point x y | x <- [0 .. width b - 1]]
@@ -119,12 +136,11 @@ rmFromBoard l uis b =
 
 status :: Blueprint -> String
 status b =
-  case makeFactory b of
-    Just f -> show $ isSatisfied b $ stepUntilStableOrN 50 f emptyResources
-    Nothing -> "Illegal arrangement"
-
-aMap :: AttrMap
-aMap = attrMap V.defAttr []
+  if minimumSinksToSatisfy b == 0
+    then "Empty"
+    else case makeFactory b of
+      Just f -> show $ isSatisfied b $ stepUntilStableOrN 50 f emptyResources
+      Nothing -> "Illegal arrangement"
 
 -- | Transforms Brick Widget Locations (on a square grid) into brueprint points
 tf :: Location -> Point
@@ -144,8 +160,8 @@ opMachines :: [Machine]
 opMachines = Op <$> [Add, Subtract, Multiply, Divide, Modulo, Factor, Duplicate]
 
 wireMachines :: [Machine]
-wireMachines = Wire <$> [Vertical, Horizontal, NE, SE, SW, NW, Overlap]
+wireMachines = Wire <$> [Vertical, Horizontal, NE, SE, NW, SW, Overlap]
 
 -- | Sinks and Sources. For Debugging purposes.
 goalMachines :: [Machine]
-goalMachines = [Source 10, Source 2, Sink 5]
+goalMachines = [Sink 5, Source 10, Source 2]
