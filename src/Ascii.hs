@@ -17,104 +17,91 @@ drawMachineSelector :: Machine -> Widget Name
 drawMachineSelector m = clickable (Select m) $ drawMachine m <+> drawMachinesLeft (-1)
 
 drawMachine :: Machine -> Widget n
-drawMachine (Op op) = drawOp (opToChar op)
-drawMachine (Wire dir) = drawWire dir
-drawMachine Occupied = drawOccupied
+drawMachine (Op op) = str $ drawOp (opToChar op)
+drawMachine (Wire dir) = str $ drawWire dir
+drawMachine Occupied = str drawOccupied
 drawMachine (Source n) = drawSource n
 drawMachine (Sink n) = drawSink n
 
 -- For future use
 -- drawMachine _ = drawGeneric
 
-drawOp :: Char -> Widget n
+drawOp :: Char -> String
 drawOp c =
-  str $
-    " ---- \n\
-    \| "
-      ++ [c, c]
-      ++ " |\n\
-         \ ----"
+  " ---- \n\
+  \| "
+    ++ [c, c]
+    ++ " |\n\
+       \ ----"
 
-testMachine :: Widget n
+testMachine :: String
 testMachine =
-  str
-    " ---- \n\
-    \| {} |\n\
-    \ ----"
+  " ---- \n\
+  \| {} |\n\
+  \ ----"
 
-drawWire :: WireType -> Widget n
+drawWire :: WireType -> String
 drawWire Wire.Vertical =
-  str
-    " -||- \n\
-    \| || |\n\
-    \ -||- "
+  "  ││  \n\
+  \  ││  \n\
+  \  ││  "
 drawWire Wire.Horizontal =
-  str
-    " ---- \n\
-    \======\n\
-    \ ---- "
+  "      \n\
+  \══════\n\
+  \      "
 drawWire NE =
-  str
-    " -||- \n\
-    \| ====\n\
-    \ ---- "
+  "  ││  \n\
+  \  ╘╧══\n\
+  \      "
 drawWire SE =
-  str
-    " ---- \n\
-    \| ====\n\
-    \ -||- "
+  "      \n\
+  \  ════\n\
+  \  ││  "
 drawWire SW =
-  str
-    " ---- \n\
-    \==== |\n\
-    \ -||- "
+  "      \n\
+  \════  \n\
+  \  ││  "
 drawWire NW =
-  str
-    " -||- \n\
-    \==== |\n\
-    \ ---- "
+  "  ││  \n\
+  \════  \n\
+  \      "
 drawWire Overlap =
-  str
-    " -||- \n\
-    \======\n\
-    \ -||- "
+  "  ││  \n\
+  \══════\n\
+  \  ││  "
 
-drawOccupied :: Widget n
+drawOccupied :: String
 drawOccupied =
-  str
-    "\\\\\\\\\\\\\n\
-    \//////\n\
-    \\\\\\\\\\\\\"
+  "\\\\\\\\\\\\\n\
+  \//////\n\
+  \\\\\\\\\\\\\"
 
 drawSource :: Int -> Widget n
 drawSource n =
-  str " -ɅɅ- "
+  str " ┌ɅɅ┐ "
     <=> (str "<" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str ">")
-    <=> str " -VV- "
+    <=> str " └VV┘ "
 
 drawSink :: Int -> Widget n
 drawSink n =
-  str " -VV- "
+  str " ┌VV┐ "
     <=> (str ">" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str "<")
-    <=> str " -ɅɅ- "
+    <=> str " └ɅɅ┘ "
 
-drawGeneric :: Widget n
+drawGeneric :: String
 drawGeneric =
-  str
-    " PLAC \n\
-    \EHOLDE\n\
-    \ R--- "
+  " PLAC \n\
+  \EHOLDE\n\
+  \ R--- "
 
-filled :: Widget n
+filled :: String
 filled =
-  str
-    "XXXXXX\n\
-    \XXXXXX\n\
-    \XXXXXX"
+  "XXXXXX\n\
+  \XXXXXX\n\
+  \XXXXXX"
 
-empty :: Widget n
+empty :: String
 empty =
-  str
-    "      \n\
-    \      \n\
-    \      "
+  "      \n\
+  \      \n\
+  \      "

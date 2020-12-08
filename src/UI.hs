@@ -81,8 +81,8 @@ drawFactory UIState {blueprint = b} =
     drawCoord = drawCell . cellTypeAt b
 
 drawCell :: CellType -> Widget Name
-drawCell Blueprint.Fixed = filled
-drawCell Empty = empty
+drawCell Blueprint.Fixed = str filled
+drawCell Empty = str empty
 drawCell (Machine m) = drawMachine m
 
 handleEvent :: UIState -> BrickEvent Name () -> EventM Name (Next UIState)
@@ -90,10 +90,7 @@ handleEvent uis (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt uis
 handleEvent uis (MouseDown (Select m) _ _ _) = continue $ uis {placeMachine = Just m}
 handleEvent uis@UIState {blueprint = b, placeMachine = Just m} (MouseUp Board (Just BLeft) l) = continue $ uis {blueprint = placeMachineAt (tf l b) m b}
 handleEvent uis@UIState {blueprint = b} (MouseUp Board (Just BRight) l) = continue $ uis {blueprint = removeMachineAt (tf l b) b}
-handleEvent uis@UIState {blueprint = b, statusString = s} (MouseUp Run (Just BLeft) _) =
-  case makeFactory b of
-    Just f -> if isSatisfied b (stepUntilStableOrN 0 f emptyResources) then continue $ uis {statusString = "Solved!"} else continue uis
-    Nothing -> continue uis
+handleEvent uis@UIState {blueprint = b, statusString = s} (MouseUp Run (Just BLeft) _) = continue $ uis {statusString = show $ minimumSinksToSatisfy b}
 handleEvent uis _ = continue uis
 
 aMap :: AttrMap
