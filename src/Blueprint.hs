@@ -101,10 +101,3 @@ isSatisfied Blueprint {grid = grid, minimumSinksToSatisfy = n} r =
   where
     aux (p, Sink x) r = if Just x == evalState (getVert p) r then 1 else 0
     aux (_, _) _ = 0
-
--- | Transforms Brick Widget Locations (on a square grid) into brueprint points
-tf :: Location -> Blueprint -> Point
-tf (Location (x, y)) Blueprint {height = h} = Point (x `div` cellWidth) (h - 1 - (y `div` cellHeight))
-  where
-    cellWidth = 6
-    cellHeight = 3

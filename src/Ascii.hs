@@ -78,15 +78,15 @@ drawOccupied =
 
 drawSource :: Int -> Widget n
 drawSource n =
-  str " ┌ɅɅ┐ "
-    <=> (str "<" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str ">")
-    <=> str " └VV┘ "
+  str "┌─ɅɅ─┐"
+    <=> (str "│" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str "│")
+    <=> str "└─VV─┘"
 
 drawSink :: Int -> Widget n
 drawSink n =
-  str " ┌VV┐ "
-    <=> (str ">" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str "<")
-    <=> str " └ɅɅ┘ "
+  str "┌─VV─┐"
+    <=> (str "│" <+> hLimit 4 (C.hCenter $ str $ show n) <+> str "│")
+    <=> str "└─ɅɅ─┘"
 
 drawGeneric :: String
 drawGeneric =
