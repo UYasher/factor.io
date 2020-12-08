@@ -7,39 +7,6 @@ import Machine
 import Operator
 import Wire
 
-wire, operator, source, sink :: AttrName
-wire = attrName "wire"
-operator = attrName "operator"
-source = attrName "source"
-sink = attrName "sink"
-
-occupied = attrName "occupied"
-
-aMap :: AttrMap
-aMap =
-  attrMap
-    V.defAttr
-    [ (wire, fg red),
-      (occupied, fg brightRed),
-      (operator, fg brightBlue),
-      (source, fg brightYellow),
-      (sink, fg brightGreen)
-    ]
-
-drawMachinesLeft :: Int -> Widget n
-drawMachinesLeft (-1) = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
-drawMachinesLeft i = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   " ++ show i)
-
-drawMachineSelector :: Machine -> Widget n
-drawMachineSelector m = drawMachine m <+> drawMachinesLeft (-1)
-
-drawMachine :: Machine -> Widget n
-drawMachine (Op op) = withAttr operator . str $ drawOp (opToChar op)
-drawMachine (Wire dir) = withAttr wire . str $ drawWire dir
-drawMachine Occupied = str drawOccupied
-drawMachine (Source n) = withAttr source $ drawSource n
-drawMachine (Sink n) = withAttr sink $ drawSink n
-
 -- For future use
 -- drawMachine _ = drawGeneric
 

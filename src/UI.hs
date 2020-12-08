@@ -9,10 +9,8 @@ import Brick.Widgets.Border as B
 import Brick.Widgets.Border.Style as BS
 import Brick.Widgets.Center as C
 import Brick.Widgets.Core as WC
-import Control.Monad (void)
 import Factory
 import Geometry
-import Graphics.Vty (brightBlack, brightRed, brightYellow, white)
 import Graphics.Vty as V
 import Machine
 import Operator
@@ -38,24 +36,30 @@ app =
       appChooseCursor = neverShowCursor,
       appHandleEvent = handleEvent,
       appStartEvent = return,
-      appAttrMap = const aMap
+      appAttrMap = const theMap
     }
 
 boardHeight, boardWidth :: Int
 boardHeight = 15
 boardWidth = 15
 
-main :: IO ()
-main = do
-  let buildVty = do
-        v <- V.mkVty =<< V.standardIOConfig
-        V.setMode (V.outputIface v) V.Mouse True
-        return v
+wire, operator, occupied, source, sink :: AttrName
+wire = attrName "wire"
+operator = attrName "operator"
+source = attrName "source"
+sink = attrName "sink"
+occupied = attrName "occupied"
 
-  initialVty <- buildVty
-  void $ customMain initialVty buildVty Nothing app b
-  where
-    b = UIState (blankBlueprint boardHeight boardWidth) Nothing "Empty"
+theMap :: AttrMap
+theMap =
+  attrMap
+    V.defAttr
+    [ (wire, fg red),
+      (occupied, fg brightRed),
+      (operator, fg brightBlue),
+      (source, fg brightYellow),
+      (sink, fg brightGreen)
+    ]
 
 drawUI :: UIState -> [Widget Name]
 drawUI uis = [C.center $ drawLeftBoard uis <+> drawFactory uis <+> drawSideBoard uis]
@@ -84,6 +88,13 @@ drawSideBoard _ =
   where
     drawClickable m = clickable (Select m) $ drawMachineSelector m
 
+showNumMachines :: Int -> Widget n
+showNumMachines (-1) = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
+showNumMachines i = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   " ++ show i)
+
+drawMachineSelector :: Machine -> Widget n
+drawMachineSelector m = drawMachine m <+> showNumMachines (-1)
+
 drawFactory :: UIState -> Widget Name
 drawFactory UIState {blueprint = b} =
   withAttr (attrName "colorful")
@@ -100,6 +111,13 @@ drawCell :: CellType -> Widget Name
 drawCell Blueprint.Fixed = str filled
 drawCell Empty = str empty
 drawCell (Machine m) = drawMachine m
+
+drawMachine :: Machine -> Widget n
+drawMachine (Op op) = withAttr operator . str $ drawOp (opToChar op)
+drawMachine (Wire dir) = withAttr wire . str $ drawWire dir
+drawMachine Occupied = withAttr occupied $ str drawOccupied
+drawMachine (Source n) = withAttr source $ drawSource n
+drawMachine (Sink n) = withAttr sink $ drawSink n
 
 handleEvent :: UIState -> BrickEvent Name () -> EventM Name (Next UIState)
 handleEvent uis (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt uis
@@ -149,7 +167,7 @@ addSink b@Blueprint {minimumSinksToSatisfy = m} = b {minimumSinksToSatisfy = m +
 rmSink :: Blueprint -> Blueprint
 rmSink b@Blueprint {minimumSinksToSatisfy = m} = b {minimumSinksToSatisfy = m - 1}
 
--- | Returns a list of all operator machines
+-- | Lists of machines
 opMachines :: [Machine]
 opMachines = Op <$> [Add, Subtract, Multiply, Divide, Modulo, Factor, Duplicate]
 
