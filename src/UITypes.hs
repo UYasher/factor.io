@@ -3,7 +3,6 @@ module UITypes where
 import Ascii
 import Blueprint
 import Brick hiding (Horizontal, Vertical)
-import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 import Factory
 import Geometry
@@ -18,7 +17,8 @@ data UIState = UIState
   { blueprint :: Blueprint,
     selectedMachine :: Maybe Machine,
     currResource :: Resources,
-    statusString :: String
+    statusString :: String,
+    currLayer :: Layer
   }
 
 initUIState :: IO UIState
@@ -27,9 +27,12 @@ initUIState = do
   let m = Nothing
   let r = emptyResources
   let s = "Empty"
-  return $ UIState b m r s
+  let l = Campaign
+  return $ UIState b m r s l
 
 data Tick = Tick
+
+data Layer = Menu | Campaign | Debug
 
 data Name = Board | Select {name :: Machine} | Run | Random
   deriving (Eq, Ord)

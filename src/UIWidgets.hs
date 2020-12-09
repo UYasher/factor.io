@@ -28,17 +28,17 @@ renderUI uis =
 
 -- Render Info boxes on the Left
 renderLeftBoard :: UIState -> Widget Name
-renderLeftBoard (UIState _ _ _ s) =
+renderLeftBoard (UIState _ _ _ s l) =
   padRight (Pad 1) $
     clickable Run (renderSimpleBox "run")
-      <=> clickable Random (renderSimpleBox "Random")
-      <=> renderSimpleBox s
+      <=> clickable Random (renderSimpleBox "Random\npuzzle")
+      <=> renderDebug l (renderSimpleBox s)
   where
     renderSimpleBox s = addBoldBorder "" . vLimit 3 . hLimit 12 . C.center $ str s
 
 -- Render Selection boxes on the right
 renderSideBoard :: UIState -> Widget Name
-renderSideBoard _ = opSelectBox <+> padLeft (Pad 1) sinkSelectBox
+renderSideBoard UIState {currLayer = l} = opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
   where
     opSelectBox = addBoldBorder "" . machineList $ opMachines ++ wireMachines
     sinkSelectBox = addBoldBorder "Debug" $ machineList goalMachines -- Debug!
@@ -92,6 +92,10 @@ renderWithOverlay (Just i) m s =
 
 addBoldBorder :: String -> Widget n -> Widget n
 addBoldBorder s = withBorderStyle BS.unicodeBold . B.borderWithLabel (str s)
+
+renderDebug :: Layer -> Widget n -> Widget n
+renderDebug Debug w = w
+renderDebug _ w = emptyWidget
 
 -- | Lists of machines
 opMachines :: [Machine]
