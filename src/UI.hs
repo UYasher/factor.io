@@ -50,11 +50,12 @@ boardHeight, boardWidth :: Int
 boardHeight = 15
 boardWidth = 15
 
-wire, operator, occupied, source, sink :: AttrName
+wire, operator, occupied, source, sink, solvedSink :: AttrName
 wire = attrName "wire"
 operator = attrName "operator"
 source = attrName "source"
 sink = attrName "sink"
+solvedSink = attrName "solvedSink"
 occupied = attrName "occupied"
 
 theMap :: AttrMap
@@ -64,8 +65,9 @@ theMap =
     [ (wire, fg brightYellow),
       (occupied, fg brightRed),
       (operator, fg brightBlue),
-      (source, fg red),
-      (sink, fg brightGreen)
+      (source, fg brightYellow),
+      (sink, fg red),
+      (solvedSink, fg brightGreen)
     ]
 
 renderUI :: UIState -> [Widget Name]
@@ -132,15 +134,19 @@ renderFactory uis@UIState {blueprint = b} =
     renderCoord p = renderCell p uis
 
 renderCell :: Point -> UIState -> Widget n
-renderCell p UIState {blueprint = b, currResource = r} =
+renderCell p uis@UIState {blueprint = b, currResource = r} =
   case cellTypeAt b p of
     Blueprint.Fixed -> str filled
     Empty -> str empty
-    Machine m@(Sink _) -> machineAttr m . str $ drawMachine m
+    Machine m@(Sink _) -> sinkAttr m uis . str $ drawMachine m
     Machine m -> machineAttr m . str $ drawMachine m |*| h |*| v
   where
     h = fromMaybe (-1) $ getHorzIntAt p r
     v = fromMaybe (-1) $ getVertIntAt p r
+
+sinkAttr :: Machine -> UIState -> Widget n -> Widget n
+sinkAttr m@(Sink _) UIState {blueprint = b, currResource = r} =
+  if isSatisfied b r then withAttr solvedSink else withAttr sink
 
 machineAttr :: Machine -> Widget n -> Widget n
 machineAttr m =
@@ -240,9 +246,9 @@ fakeRandomPuzzle = do
   numOuts <- elements [1, 2]
   let sources = mapM (\_ -> Source <$> choose (0, 63)) [0 .. numIns]
   let sinks = mapM (\_ -> Sink <$> choose (0, 63)) [0 .. numOuts]
-  let sourceLocations = [Point 3 14, Point 12 14]
+  let sourceLocations = [Point 2 14, Point 12 14]
   let sinkLocations = [Point 5 0, Point 10 0]
   let sourceFs = zipWith placeMachineAt sourceLocations <$> sources
   let sinkFs = zipWith placeMachineAt sinkLocations <$> sinks
   let allModifications = foldr (.) <$> (foldr (.) id <$> sourceFs) <*> sinkFs
-  allModifications <*> return (blankBlueprint 15 15)
+  allModifications <*> return (addSink $ blankBlueprint 15 15)
