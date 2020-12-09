@@ -85,18 +85,21 @@ status b =
 
 -- | Transforms Brick Widget Locations (on a square grid) into blueprint points
 tf :: Location -> Point
-tf (Location (x, y)) = Point (x `div` cellWidth) (boardHeight - 1 - (y `div` cellHeight))
+tf (Location (x, y)) =
+  Point (x `div` cellWidth) (boardHeight - 1 - (y `div` cellHeight))
   where
     cellWidth = 6
     cellHeight = 3
 
 -- | Add a sink, for sandbox mode/debugging
 addSink :: Blueprint -> Blueprint
-addSink b@Blueprint {minimumSinksToSatisfy = m} = b {minimumSinksToSatisfy = m + 1}
+addSink b@Blueprint {minimumSinksToSatisfy = m} =
+  b {minimumSinksToSatisfy = m + 1}
 
 -- | Remove a sink, also for sandbox mode/debugging
 rmSink :: Blueprint -> Blueprint
-rmSink b@Blueprint {minimumSinksToSatisfy = m} = b {minimumSinksToSatisfy = m - 1}
+rmSink b@Blueprint {minimumSinksToSatisfy = m} =
+  b {minimumSinksToSatisfy = m - 1}
 
 -- | for demo purposes
 fakeRandomPuzzle :: Gen Blueprint

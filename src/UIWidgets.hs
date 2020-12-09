@@ -34,11 +34,13 @@ renderLeftBoard UIState {ss = s, cl = l} =
       <=> clickable Random (renderSimpleBox "Random\npuzzle")
       <=> renderDebug l (renderSimpleBox s)
   where
-    renderSimpleBox s = addBoldBorder "" . vLimit 3 . hLimit 12 . C.center $ str s
+    renderSimpleBox s =
+      addBoldBorder "" . vLimit 3 . hLimit 12 . C.center $ str s
 
 -- Render Selection boxes on the right
 renderSideBoard :: UIState -> Widget Name
-renderSideBoard UIState {cl = l} = opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
+renderSideBoard UIState {cl = l} =
+  opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
   where
     opSelectBox = addBoldBorder "" . machineList $ opMachines ++ wireMachines
     sinkSelectBox = addBoldBorder "Debug" $ machineList goalMachines -- Debug!
@@ -46,16 +48,20 @@ renderSideBoard UIState {cl = l} = opSelectBox <+> renderDebug l (padLeft (Pad 1
     selectable m = clickable (Select m) $ renderMachineSelector m
 
 renderMachineSelector :: Machine -> Widget n
-renderMachineSelector m = machineAttr m (str $ drawMachine m) <+> showNumMachines Nothing
+renderMachineSelector m =
+  machineAttr m (str $ drawMachine m) <+> showNumMachines Nothing
 
 showNumMachines :: Maybe Int -> Widget n
-showNumMachines Nothing = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
-showNumMachines (Just i) = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   " ++ show i)
+showNumMachines Nothing =
+  padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
+showNumMachines (Just i) =
+  padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   " ++ show i)
 
 -- Render the center game board
 
 renderFactory :: UIState -> Widget Name
-renderFactory uis@UIState {bp = b} = addBoldBorder "Factory" . clickable Board $ vBox rows
+renderFactory uis@UIState {bp = b} =
+  addBoldBorder "Factory" . clickable Board $ vBox rows
   where
     rows = [hBox $ cellsInRow r | r <- [height b - 1, height b - 2 .. 0]]
     cellsInRow y = [renderCoord $ Point x y | x <- [0 .. width b - 1]]
@@ -77,7 +83,10 @@ renderWithOverlay :: Maybe Int -> Machine -> String -> Widget n
 renderWithOverlay Nothing m s = machineAttr m $ str s
 renderWithOverlay (Just i) m s =
   machineAttr m (str top)
-    <=> (machineAttr m (str midLeft) <+> withAttr flow (str num) <+> machineAttr m (str midRight))
+    <=> ( machineAttr m (str midLeft)
+            <+> withAttr flow (str num)
+            <+> machineAttr m (str midRight)
+        )
     <=> machineAttr m (str bot)
   where
     rows = lines s
