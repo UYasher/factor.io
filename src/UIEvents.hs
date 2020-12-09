@@ -15,31 +15,52 @@ import UITypes
 handleEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 handleEvent uis e@(VtyEvent (EvKey _ _)) = keyEvent uis e
 handleEvent uis e@MouseUp {} = mouseEvent uis e
-handleEvent uis@(UIState _ _ _ "Running" _) (AppEvent Tick) = continue $ stepUIState uis
+handleEvent uis@UIState {ss = "Running"} (AppEvent Tick) =
+  continue $ stepUIState uis
 handleEvent uis _ = continue uis
 
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
+keyEvent uis@UIState {wd = NS} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = EW}
+keyEvent uis@UIState {wd = EW} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = NS}
 keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) = liftIO initUIState >>= continue
+keyEvent uis _ = continue uis
 
 mouseEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
-mouseEvent uis (MouseUp (Select m) _ _) = continue $ uis {selectedMachine = Just m}
-mouseEvent uis@(UIState b (Just m) _ _ _) (MouseUp Board (Just BLeft) l) = continue $ addToBoard l uis m b
-mouseEvent uis (MouseUp Board (Just BRight) l) = continue $ rmFromBoard l uis (blueprint uis)
-mouseEvent _ (MouseUp Random (Just BLeft) _) = liftIO (generate fakeRandomUIState) >>= continue
-mouseEvent (UIState b p _ _ l) (MouseUp Run (Just BLeft) _) = continue $ UIState b p emptyResources "Running" l
+mouseEvent uis (MouseUp (Select m) _ _) = continue $ uis {sm = Just m}
+mouseEvent uis@UIState {bp = b, sm = (Just m)} (MouseUp Board (Just BLeft) l) =
+  continue $ addToBoard l uis m b
+mouseEvent uis (MouseUp Board (Just BRight) l) =
+  continue $ rmFromBoard l uis (bp uis)
+mouseEvent _ (MouseUp Random (Just BLeft) _) =
+  liftIO (generate fakeRandomUIState) >>= continue
+mouseEvent uis@UIState {bp = b, sm = p, cl = l} (MouseUp Run (Just BLeft) _) =
+  continue $ uis {cr = emptyResources, ss = "Running"}
 
 stepUIState :: UIState -> UIState
-stepUIState (UIState b p r s l) = UIState b p r' s' l
+stepUIState uis@UIState {bp = b, cr = r, ss = s} = uis {cr = r', ss = s'}
   where
     r' = maybe r (`step` r) (makeFactory b)
-    s' = maybe (status b) (\f -> if isStabilized f r' then status b else s) (makeFactory b)
+    s' = maybe (status b) checkIfRunning (makeFactory b)
+    checkIfRunning = \f -> if isStabilized f r' then status b else s
 
 addToBoard :: Location -> UIState -> Machine -> Blueprint -> UIState
 addToBoard l uis m b =
   case m of
-    Sink _ -> UIState sb' (Just m) emptyResources (status sb') (currLayer uis)
-    _ -> UIState b' (Just m) emptyResources (status b') (currLayer uis)
+    Sink _ ->
+      uis
+        { bp = sb',
+          sm = Just m,
+          cr = emptyResources,
+          ss = status sb'
+        }
+    _ ->
+      uis
+        { bp = b',
+          sm = Just m,
+          cr = emptyResources,
+          ss = status b'
+        }
   where
     b' = placeMachineAt (tf l) m b
     sb' = addSink b'
@@ -48,8 +69,8 @@ rmFromBoard :: Location -> UIState -> Blueprint -> UIState
 rmFromBoard l uis b =
   case getMachineAt (tf l) b of
     Nothing -> uis
-    Just (Sink _) -> UIState sb' (selectedMachine uis) emptyResources (status sb') (currLayer uis)
-    Just _ -> UIState b' (selectedMachine uis) emptyResources (status b') (currLayer uis)
+    Just (Sink _) -> uis {bp = sb', cr = emptyResources, ss = status sb'}
+    Just _ -> uis {bp = b', cr = emptyResources, ss = status sb'}
   where
     b' = removeMachineAt (tf l) b
     sb' = rmSink b'
@@ -99,4 +120,5 @@ fakeRandomUIState = do
   let r = emptyResources
   let s = "Hello!"
   let l = Debug
-  return $ UIState b m r s l
+  let w = NS
+  return $ UIState b m r s l w

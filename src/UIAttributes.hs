@@ -30,7 +30,7 @@ occupied = attrName "occupied"
 flow = attrName "flow"
 
 sinkAttr :: Machine -> UIState -> Widget n -> Widget n
-sinkAttr (Sink _) UIState {blueprint = b, currResource = r} =
+sinkAttr (Sink _) UIState {bp = b, cr = r} =
   if isSatisfied b r then withAttr solvedSink else withAttr sink
 
 machineAttr :: Machine -> Widget n -> Widget n

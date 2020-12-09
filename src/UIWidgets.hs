@@ -28,7 +28,7 @@ renderUI uis =
 
 -- Render Info boxes on the Left
 renderLeftBoard :: UIState -> Widget Name
-renderLeftBoard (UIState _ _ _ s l) =
+renderLeftBoard UIState {ss = s, cl = l} =
   padRight (Pad 1) $
     clickable Run (renderSimpleBox "run")
       <=> clickable Random (renderSimpleBox "Random\npuzzle")
@@ -38,7 +38,7 @@ renderLeftBoard (UIState _ _ _ s l) =
 
 -- Render Selection boxes on the right
 renderSideBoard :: UIState -> Widget Name
-renderSideBoard UIState {currLayer = l} = opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
+renderSideBoard UIState {cl = l} = opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
   where
     opSelectBox = addBoldBorder "" . machineList $ opMachines ++ wireMachines
     sinkSelectBox = addBoldBorder "Debug" $ machineList goalMachines -- Debug!
@@ -55,14 +55,14 @@ showNumMachines (Just i) = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   "
 -- Render the center game board
 
 renderFactory :: UIState -> Widget Name
-renderFactory uis@UIState {blueprint = b} = addBoldBorder "Factory" . clickable Board $ vBox rows
+renderFactory uis@UIState {bp = b} = addBoldBorder "Factory" . clickable Board $ vBox rows
   where
     rows = [hBox $ cellsInRow r | r <- [height b - 1, height b - 2 .. 0]]
     cellsInRow y = [renderCoord $ Point x y | x <- [0 .. width b - 1]]
     renderCoord p = renderCell p uis
 
 renderCell :: Point -> UIState -> Widget n
-renderCell p uis@UIState {blueprint = b, currResource = r} =
+renderCell p uis@UIState {bp = b, cr = r} =
   case cellTypeAt b p of
     Blueprint.Fixed -> str filled
     Empty -> str empty

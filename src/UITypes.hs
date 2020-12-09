@@ -14,11 +14,12 @@ import Test.QuickCheck.Gen
 import Wire
 
 data UIState = UIState
-  { blueprint :: Blueprint,
-    selectedMachine :: Maybe Machine,
-    currResource :: Resources,
-    statusString :: String,
-    currLayer :: Layer
+  { bp :: Blueprint, -- Blueprint
+    sm :: Maybe Machine, -- Selected Machine
+    cr :: Resources, -- Current Resource
+    ss :: String, -- Status String
+    cl :: Layer, -- Current Layer
+    wd :: UIWireDirection -- User Wire Placement
   }
 
 initUIState :: IO UIState
@@ -27,12 +28,15 @@ initUIState = do
   let m = Nothing
   let r = emptyResources
   let s = "Empty"
-  let l = Campaign
-  return $ UIState b m r s l
+  let l = Debug
+  let w = NS
+  return $ UIState b m r s l w
 
 data Tick = Tick
 
 data Layer = Menu | Campaign | Debug
+
+data UIWireDirection = NS | EW
 
 data Name = Board | Select {name :: Machine} | Run | Random
   deriving (Eq, Ord)
