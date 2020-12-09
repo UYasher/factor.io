@@ -40,7 +40,10 @@ library
       ResourceUpdate
       Solver
       State
-      UI
+      UITypes
+      UIEvents
+      UIWidgets
+      UIAttributes
       Wire
   other-modules:
       Paths_project_cis552

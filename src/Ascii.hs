@@ -14,11 +14,11 @@ import Wire
 
 -- | Add a number to the center of a sprite
 -- | Note that 0 <= i <= 99, and len(str) == 21
--- | TODO: CHANGE THIS TO MAYBE INT
-(|*|) :: String -> Int -> String
-s |*| i | i < 0 = s
-s |*| i | i < 10 = take 9 s ++ show i ++ drop 10 s
-s |*| i = take 9 s ++ show i ++ drop 11 s
+(|*|) :: String -> Maybe Int -> String
+s |*| Nothing = s
+s |*| (Just i)
+  | i < 10 = take 9 s ++ show i ++ drop 10 s
+  | otherwise = take 9 s ++ show i ++ drop 11 s
 
 drawMachine :: Machine -> String
 drawMachine m =
@@ -58,15 +58,15 @@ drawWire NE =
   \      "
 drawWire SE =
   "      \n\
-  \  ════\n\
+  \  ╒╤══\n\
   \  ││  "
 drawWire SW =
   "      \n\
-  \════  \n\
+  \══╤╕  \n\
   \  ││  "
 drawWire NW =
   "  ││  \n\
-  \════  \n\
+  \══╧╛  \n\
   \      "
 drawWire Overlap =
   "  ││  \n\

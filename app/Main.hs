@@ -1,13 +1,14 @@
 module Main where
 
-import Blueprint (blankBlueprint)
-import Brick (customMain)
+import Brick
 import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (forever, void)
 import Graphics.Vty
-import ResourceUpdate
-import UI (Tick (Tick), UIState (UIState), app, boardHeight, boardWidth)
+import UIAttributes
+import UIEvents
+import UITypes
+import UIWidgets
 
 main :: IO ()
 main = do
@@ -22,6 +23,15 @@ main = do
     threadDelay 300000
 
   initialVty <- buildVty
+  b <- initUIState
   void $ customMain initialVty buildVty (Just chan) app b
-  where
-    b = UIState (blankBlueprint boardHeight boardWidth) Nothing emptyResources "Empty"
+
+app :: App UIState Tick Name
+app =
+  App
+    { appDraw = renderUI,
+      appChooseCursor = neverShowCursor,
+      appHandleEvent = handleEvent,
+      appStartEvent = return,
+      appAttrMap = const theMap
+    }
