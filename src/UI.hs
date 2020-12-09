@@ -9,12 +9,14 @@ import Brick.Widgets.Border as B
 import Brick.Widgets.Border.Style as BS
 import Brick.Widgets.Center as C
 import Brick.Widgets.Core as WC
+import Data.Maybe (fromMaybe)
 import Factory
 import Geometry
 import Graphics.Vty as V
 import Machine
 import Operator
-import ResourceUpdate (emptyResources)
+import ResourceUpdate
+import State (evalState)
 import Wire
 
 -- | We need a wrapper around the Blueprint because
@@ -23,16 +25,19 @@ import Wire
 data UIState = UIState
   { blueprint :: Blueprint,
     selectedMachine :: Maybe Machine,
+    currResource :: Resources,
     statusString :: String
   }
+
+data Tick = Tick
 
 data Name = Board | Select {name :: Machine} | Run
   deriving (Eq, Ord)
 
-app :: App UIState () Name
+app :: App UIState Tick Name
 app =
   App
-    { appDraw = drawUI,
+    { appDraw = renderUI,
       appChooseCursor = neverShowCursor,
       appHandleEvent = handleEvent,
       appStartEvent = return,
@@ -61,42 +66,51 @@ theMap =
       (sink, fg brightGreen)
     ]
 
-drawUI :: UIState -> [Widget Name]
-drawUI uis = [C.center $ drawLeftBoard uis <+> drawFactory uis <+> drawSideBoard uis]
+renderUI :: UIState -> [Widget Name]
+renderUI uis = [C.center $ renderLeftBoard uis <+> renderFactory uis <+> renderSideBoard uis]
 
 -- For debugging and running
-drawLeftBoard :: UIState -> Widget Name
-drawLeftBoard UIState {statusString = s} =
-  padRight (Pad 1)
-    . withBorderStyle BS.unicodeBold
-    . B.borderWithLabel (str "Status")
-    . vLimit 3
-    . hLimit 7
-    . C.center
-    $ str s
+renderLeftBoard :: UIState -> Widget Name
+renderLeftBoard UIState {statusString = s} =
+  padRight (Pad 1) $
+    ( withBorderStyle BS.unicodeBold
+        . B.borderWithLabel (str "Debug")
+        . vLimit 3
+        . hLimit 7
+        . C.center
+        $ str s
+    )
+      <=> ( clickable Run
+              . withBorderStyle BS.unicodeBold
+              . B.border
+              . vLimit 3
+              . hLimit 7
+              . C.center
+              $ str "Run"
+          )
 
 -- For item selection
-drawSideBoard :: UIState -> Widget Name
-drawSideBoard _ =
+renderSideBoard :: UIState -> Widget Name
+renderSideBoard _ =
   padLeft (Pad 2) $
     withBorderStyle
       BS.unicodeBold
-      (B.border $ vBox [drawClickable m | m <- opMachines ++ wireMachines])
+      (B.border $ vBox [renderClickable m | m <- opMachines ++ wireMachines])
       <=> withBorderStyle
         BS.unicodeBold
-        (B.borderWithLabel (str "debug") $ vBox [drawClickable m | m <- goalMachines])
+        (B.borderWithLabel (str "debug") $ vBox [renderClickable m | m <- goalMachines])
   where
-    drawClickable m = clickable (Select m) $ drawMachineSelector m
+    renderClickable m = clickable (Select m) $ renderMachineSelector m
 
 showNumMachines :: Int -> Widget n
 showNumMachines (-1) = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str "-- inf")
 showNumMachines i = padLeft (Pad 1) (vLimit 3 $ C.vCenter $ str $ "--   " ++ show i)
 
-drawMachineSelector :: Machine -> Widget n
-drawMachineSelector m = drawMachine m <+> showNumMachines (-1)
+renderMachineSelector :: Machine -> Widget n
+renderMachineSelector m = machineAttr m (str $ drawMachine m) <+> showNumMachines (-1)
 
-drawFactory :: UIState -> Widget Name
-drawFactory UIState {blueprint = b} =
+renderFactory :: UIState -> Widget Name
+renderFactory uis@UIState {blueprint = b} =
   withAttr (attrName "colorful")
     . withBorderStyle BS.unicodeBold
     . B.borderWithLabel (str "Factory")
@@ -104,34 +118,47 @@ drawFactory UIState {blueprint = b} =
     $ vBox rows
   where
     rows = [hBox $ cellsInRow r | r <- [height b - 1, height b - 2 .. 0]]
-    cellsInRow y = [drawCoord $ Point x y | x <- [0 .. width b - 1]]
-    drawCoord = drawCell . cellTypeAt b
+    cellsInRow y = [renderCoord $ Point x y | x <- [0 .. width b - 1]]
+    renderCoord p = renderCell p uis
 
-drawCell :: CellType -> Widget Name
-drawCell Blueprint.Fixed = str filled
-drawCell Empty = str empty
-drawCell (Machine m) = drawMachine m
+renderCell :: Point -> UIState -> Widget n
+renderCell p UIState {blueprint = b, currResource = r} =
+  case cellTypeAt b p of
+    Blueprint.Fixed -> str filled
+    Empty -> str empty
+    Machine m -> machineAttr m . str $ drawMachine m |*| h |*| v
+  where
+    h = fromMaybe (-1) $ getHorzIntAt p r
+    v = fromMaybe (-1) $ getVertIntAt p r
 
-drawMachine :: Machine -> Widget n
-drawMachine (Op op) = withAttr operator . str $ drawOp (opToChar op)
-drawMachine (Wire dir) = withAttr wire . str $ drawWire dir
-drawMachine Occupied = withAttr occupied $ str drawOccupied
-drawMachine (Source n) = withAttr source $ drawSource n
-drawMachine (Sink n) = withAttr sink $ drawSink n
+machineAttr :: Machine -> Widget n -> Widget n
+machineAttr m =
+  case m of
+    Op _ -> withAttr operator
+    Wire _ -> withAttr wire
+    Occupied -> withAttr occupied
+    Source _ -> withAttr source
+    Sink _ -> withAttr sink
 
-handleEvent :: UIState -> BrickEvent Name () -> EventM Name (Next UIState)
+getHorzIntAt :: Point -> Resources -> Maybe Int
+getHorzIntAt p = evalState (getHoriz p)
+
+getVertIntAt :: Point -> Resources -> Maybe Int
+getVertIntAt p = evalState (getVert p)
+
+handleEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 handleEvent uis (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt uis
 handleEvent uis (MouseDown (Select m) _ _ _) = continue $ uis {selectedMachine = Just m}
-handleEvent (UIState b p@(Just m) _) (MouseUp Board (Just BLeft) l) = continue $ addToBoard l m b
+handleEvent (UIState b p@(Just m) _ _) (MouseUp Board (Just BLeft) l) = continue $ addToBoard l m b
 handleEvent uis (MouseUp Board (Just BRight) l) = continue $ rmFromBoard l uis (blueprint uis)
-handleEvent (UIState b p _) (MouseUp Run (Just BLeft) _) = continue $ UIState b p (status b)
+handleEvent (UIState b p _ _) (MouseUp Run (Just BLeft) _) = continue $ UIState b p emptyResources (status b)
 handleEvent uis _ = continue uis
 
 addToBoard :: Location -> Machine -> Blueprint -> UIState
 addToBoard l m b =
   case m of
-    Sink _ -> UIState sb' (Just m) (status sb')
-    _ -> UIState b' (Just m) (status b')
+    Sink _ -> UIState sb' (Just m) emptyResources (status sb')
+    _ -> UIState b' (Just m) emptyResources (status b')
   where
     b' = placeMachineAt (tf l) m b
     sb' = addSink b'
@@ -140,8 +167,8 @@ rmFromBoard :: Location -> UIState -> Blueprint -> UIState
 rmFromBoard l uis b =
   case getMachineAt (tf l) b of
     Nothing -> uis
-    Just (Sink _) -> UIState sb' (selectedMachine uis) (status sb')
-    Just _ -> UIState b' (selectedMachine uis) (status b')
+    Just (Sink _) -> UIState sb' (selectedMachine uis) emptyResources (status sb')
+    Just _ -> UIState b' (selectedMachine uis) emptyResources (status b')
   where
     b' = removeMachineAt (tf l) b
     sb' = rmSink b'
