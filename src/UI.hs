@@ -50,13 +50,14 @@ boardHeight, boardWidth :: Int
 boardHeight = 15
 boardWidth = 15
 
-wire, operator, occupied, source, sink, solvedSink :: AttrName
+wire, operator, occupied, source, sink, solvedSink, flow :: AttrName
 wire = attrName "wire"
 operator = attrName "operator"
 source = attrName "source"
 sink = attrName "sink"
 solvedSink = attrName "solvedSink"
 occupied = attrName "occupied"
+flow = attrName "flow"
 
 theMap :: AttrMap
 theMap =
@@ -67,7 +68,8 @@ theMap =
       (operator, fg brightBlue),
       (source, fg brightYellow),
       (sink, fg red),
-      (solvedSink, fg brightGreen)
+      (solvedSink, fg brightGreen),
+      (flow, fg brightWhite)
     ]
 
 renderUI :: UIState -> [Widget Name]
@@ -139,10 +141,26 @@ renderCell p uis@UIState {blueprint = b, currResource = r} =
     Blueprint.Fixed -> str filled
     Empty -> str empty
     Machine m@(Sink _) -> sinkAttr m uis . str $ drawMachine m
-    Machine m -> machineAttr m . str $ drawMachine m |*| h |*| v
+    Machine m -> injectColor h v m $ drawMachine m |*| h |*| v
   where
     h = fromMaybe (-1) $ getHorzIntAt p r
     v = fromMaybe (-1) $ getVertIntAt p r
+
+injectColor :: Int -> Int -> Machine -> String -> Widget n
+injectColor (-1) (-1) m s = machineAttr m $ str s
+injectColor h (-1) m s = injectColor (-1) h m s
+injectColor (-1) v m s =
+  machineAttr m (str top)
+    <=> (machineAttr m (str midLeft) <+> withAttr flow (str num) <+> machineAttr m (str midRight))
+    <=> machineAttr m (str bot)
+  where
+    rows = lines s
+    top = head rows
+    mid = rows !! 1
+    bot = rows !! 2
+    midLeft = take 2 mid
+    midRight = if v < 10 then drop 3 mid else drop 4 mid
+    num = if v < 10 then take 1 $ drop 2 mid else take 2 $ drop 2 mid
 
 sinkAttr :: Machine -> UIState -> Widget n -> Widget n
 sinkAttr m@(Sink _) UIState {blueprint = b, currResource = r} =

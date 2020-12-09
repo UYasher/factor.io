@@ -14,6 +14,7 @@ import Wire
 
 -- | Add a number to the center of a sprite
 -- | Note that 0 <= i <= 99, and len(str) == 21
+-- | TODO: CHANGE THIS TO MAYBE INT
 (|*|) :: String -> Int -> String
 s |*| i | i < 0 = s
 s |*| i | i < 10 = take 9 s ++ show i ++ drop 10 s
