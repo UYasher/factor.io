@@ -88,7 +88,7 @@ processWireSnake g p = aux g (p +>> Point 0 1) p
                in -- Notice: we create wire delay by sequencing the tail of the snake
                   -- before the head, so that signals can only travel one segment per step
                   combine (aux g cur newPoint) (wireToFactory dir prev cur, currentCoord)
-            _ -> (return (), [currentCoord])
+            _ -> (return (), [])
 
     combine :: (Factory, [Coord]) -> (Factory, Coord) -> (Factory, [Coord])
     combine (f1, c1) (f2, c2) = (f1 >> f2, c2 : c1)
