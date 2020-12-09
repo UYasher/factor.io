@@ -9,6 +9,7 @@ import Brick.Widgets.Border as B
 import Brick.Widgets.Border.Style as BS
 import Brick.Widgets.Center as C
 import Brick.Widgets.Core as WC
+import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 import Factory
 import Geometry
@@ -17,6 +18,7 @@ import Machine
 import Operator
 import ResourceUpdate
 import State (evalState)
+import Test.QuickCheck.Gen
 import Wire
 
 -- | We need a wrapper around the Blueprint because
@@ -31,7 +33,7 @@ data UIState = UIState
 
 data Tick = Tick
 
-data Name = Board | Select {name :: Machine} | Run
+data Name = Board | Select {name :: Machine} | Run | Random
   deriving (Eq, Ord)
 
 app :: App UIState Tick Name
@@ -59,10 +61,10 @@ theMap :: AttrMap
 theMap =
   attrMap
     V.defAttr
-    [ (wire, fg red),
+    [ (wire, fg brightYellow),
       (occupied, fg brightRed),
       (operator, fg brightBlue),
-      (source, fg brightYellow),
+      (source, fg red),
       (sink, fg brightGreen)
     ]
 
@@ -73,20 +75,28 @@ renderUI uis = [C.center $ renderLeftBoard uis <+> renderFactory uis <+> renderS
 renderLeftBoard :: UIState -> Widget Name
 renderLeftBoard UIState {statusString = s} =
   padRight (Pad 1) $
-    ( withBorderStyle BS.unicodeBold
-        . B.borderWithLabel (str "Debug")
+    ( clickable Run
+        . withBorderStyle BS.unicodeBold
+        . B.border
         . vLimit 3
-        . hLimit 7
+        . hLimit 12
         . C.center
-        $ str s
+        $ str "Run"
     )
-      <=> ( clickable Run
+      <=> ( clickable Random
               . withBorderStyle BS.unicodeBold
               . B.border
               . vLimit 3
-              . hLimit 7
+              . hLimit 12
               . C.center
-              $ str "Run"
+              $ str "Random"
+          )
+      <=> ( withBorderStyle BS.unicodeBold
+              . B.borderWithLabel (str "Debug")
+              . vLimit 3
+              . hLimit 12
+              . C.center
+              $ str s
           )
 
 -- For item selection
@@ -126,6 +136,7 @@ renderCell p UIState {blueprint = b, currResource = r} =
   case cellTypeAt b p of
     Blueprint.Fixed -> str filled
     Empty -> str empty
+    Machine m@(Sink _) -> machineAttr m . str $ drawMachine m
     Machine m -> machineAttr m . str $ drawMachine m |*| h |*| v
   where
     h = fromMaybe (-1) $ getHorzIntAt p r
@@ -151,7 +162,24 @@ handleEvent uis (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt uis
 handleEvent uis (MouseDown (Select m) _ _ _) = continue $ uis {selectedMachine = Just m}
 handleEvent (UIState b p@(Just m) _ _) (MouseUp Board (Just BLeft) l) = continue $ addToBoard l m b
 handleEvent uis (MouseUp Board (Just BRight) l) = continue $ rmFromBoard l uis (blueprint uis)
-handleEvent (UIState b p _ _) (MouseUp Run (Just BLeft) _) = continue $ UIState b p emptyResources (status b)
+handleEvent _ (MouseUp Random (Just BLeft) _) = liftIO (generate $ UIState <$> fakeRandomPuzzle <*> pure Nothing <*> pure emptyResources <*> pure "Hello!") >>= continue
+handleEvent (UIState b p _ _) (MouseUp Run (Just BLeft) _) = continue $ UIState b p emptyResources "Running"
+handleEvent (UIState b p r "Running") (AppEvent Tick) = continue $ UIState b p r' s'
+  where
+    r' =
+      case makeFactory b of
+        Just f -> step f r
+        Nothing -> r
+    s' =
+      case makeFactory b of
+        Nothing -> "Halt!"
+        Just f ->
+          if isStabilized f r'
+            then
+              if isSatisfied b r'
+                then "True"
+                else "False"
+            else "Running"
 handleEvent uis _ = continue uis
 
 addToBoard :: Location -> Machine -> Blueprint -> UIState
@@ -204,3 +232,17 @@ wireMachines = Wire <$> [Vertical, Horizontal, NE, SE, NW, SW, Overlap]
 -- | Sinks and Sources. For Debugging purposes.
 goalMachines :: [Machine]
 goalMachines = [Sink 5, Source 10, Source 2]
+
+-- | for demo purposes
+fakeRandomPuzzle :: Gen Blueprint
+fakeRandomPuzzle = do
+  numIns <- elements [1, 2]
+  numOuts <- elements [1, 2]
+  let sources = mapM (\_ -> Source <$> choose (0, 63)) [0 .. numIns]
+  let sinks = mapM (\_ -> Sink <$> choose (0, 63)) [0 .. numOuts]
+  let sourceLocations = [Point 3 14, Point 12 14]
+  let sinkLocations = [Point 5 0, Point 10 0]
+  let sourceFs = zipWith placeMachineAt sourceLocations <$> sources
+  let sinkFs = zipWith placeMachineAt sinkLocations <$> sinks
+  let allModifications = foldr (.) <$> (foldr (.) id <$> sourceFs) <*> sinkFs
+  allModifications <*> return (blankBlueprint 15 15)
