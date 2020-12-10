@@ -50,16 +50,25 @@ processWires :: Grid Machine -> Maybe Factory
 -- there's a wire snake that connects two outputs of machines, which is illegal.
 -- Otherwise, we can sequence together the "factory" of each wire snake
 processWires g =
-  let snakes = map (processWireSnake g) $ getWireSnakeHeads g
+  let snakes = map (processWireSnake g) $ filterOutNonNorthWireSnakeHeads g (getCandidateWireSnakeHeads g)
    in if anySame (snakes >>= snd) then Nothing else Just $ mapM_ fst snakes
   where
     anySame :: Ord a => [a] -> Bool
     anySame xs = Set.size (Set.fromList xs) < length xs
 
+-- | Filters out any wire snake heads that start with wires that don't connect North
+filterOutNonNorthWireSnakeHeads :: Grid Machine -> [Point] -> [Point]
+filterOutNonNorthWireSnakeHeads g = filter aux
+  where
+    aux :: Point -> Bool
+    aux p = case Map.lookup p g of
+      Just (Wire w) -> connectsToNorth w
+      _ -> True
+
 -- | Returns a list of points that could be the start of a wire snake
 -- (ie, is below a Source or is in below the output of some Operator)
-getWireSnakeHeads :: Grid Machine -> [Point]
-getWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
+getCandidateWireSnakeHeads :: Grid Machine -> [Point]
+getCandidateWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
   where
     isOutput :: Grid Machine -> Point -> Bool
     isOutput g p =
