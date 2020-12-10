@@ -80,6 +80,9 @@ placeMachineAt p m b@Blueprint {grid = grid}
           hof = \p' -> Map.insert (p +>> p') Occupied
        in foldr ($) g changes
 
+removeMachines :: Blueprint -> [Point] -> Blueprint
+removeMachines = foldr removeMachineAt
+
 removeMachineAt :: Point -> Blueprint -> Blueprint
 removeMachineAt p b@Blueprint {grid = grid}
   | not $ isEditable p b = b

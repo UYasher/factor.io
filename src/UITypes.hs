@@ -19,7 +19,7 @@ data UIState = UIState
     cr :: Resources, -- Current Resource
     ss :: String, -- Status String
     cl :: Layer, -- Current Layer
-    pw :: [Point] -- Prewires
+    hl :: [Point] -- Highlighter
   }
 
 initUIState :: IO UIState
@@ -28,15 +28,22 @@ initUIState = do
   let m = Nothing
   let r = emptyResources
   let s = "Empty"
-  let l = Debug
+  let l = Menu
   let w = []
   return $ UIState b m r s l w
 
+clearUIState :: UIState -> UIState
+clearUIState uis = uis {bp = b, cr = r}
+  where
+    b = blankBlueprint boardHeight boardWidth
+    r = emptyResources
+
 data Tick = Tick
 
-data Layer = Menu | Campaign | Debug
+data Layer = Menu | Debug -- | Campaign | LevelSelect
+  deriving (Eq, Ord)
 
-data Name = Board | Select {name :: Machine} | Run | Random
+data Name = Board | Run | Random | Select {name :: Machine} | Move {to :: Layer}
   deriving (Eq, Ord)
 
 boardHeight, boardWidth :: Int

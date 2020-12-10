@@ -20,39 +20,35 @@ handleEvent uis e = case (uis, e) of
   (uis@UIState {ss = "Running"}, AppEvent Tick) -> continue $ stepUIState uis
   (uis, _) -> continue uis
 
--- handleEvent uis e@(VtyEvent (EvKey _ _)) = keyEvent uis e
--- handleEvent uis e@MouseUp {} = mouseEvent uis e
--- handleEvent uis e@MouseDown {} = mouseEvent uis e
--- handleEvent uis@UIState {ss = "Running"} (AppEvent Tick) =
---   continue $ stepUIState uis
--- handleEvent uis _ = continue uis
-
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
-keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
-keyEvent uis@UIState {bp = b, pw = p} (VtyEvent (EvKey (KChar ' ') [])) =
-  liftIO initUIState >>= continue
-keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) =
-  liftIO initUIState >>= continue
-keyEvent uis _ = continue uis
+keyEvent uis@(UIState b _ _ ss cl hl) (VtyEvent (EvKey (KChar c) [])) =
+  case c of
+    'q' -> halt uis
+    'm' -> liftIO initUIState >>= continue
+    ' ' -> continue $ clearUIState uis
+    _ -> continue uis
 
 mouseEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
+mouseEvent uis (MouseDown (Move Debug) BLeft _ _) = continue $ uis {cl = Debug}
+mouseEvent uis@UIState {bp = b} (MouseDown Board BRight _ l) =
+  continue $ uis {hl = [tf l], bp = removeMachineAt (tf l) b}
+mouseEvent uis@UIState {hl = pw} (MouseUp Board (Just BRight) l) =
+  continue $ uis {hl = []}
 mouseEvent uis@UIState {sm = (Just (Wire _))} (MouseDown Board BLeft _ l) =
   continue $ addPrewire (tf l) uis
 mouseEvent
   uis@UIState
     { bp = b,
-      pw = p,
+      hl = p,
       sm = (Just (Wire _))
     }
   (MouseUp Board (Just BLeft) l) =
-    continue $ uis {bp = b', pw = []}
+    continue $ uis {bp = b', hl = []}
     where
       b' = placePrewiresAt p b
 mouseEvent uis (MouseUp (Select m) _ _) = continue $ uis {sm = Just m}
 mouseEvent uis@UIState {bp = b, sm = (Just m)} (MouseUp Board (Just BLeft) l) =
   continue $ addToBoard l uis m b
-mouseEvent uis (MouseUp Board (Just BRight) l) =
-  continue $ rmFromBoard l uis (bp uis)
 mouseEvent _ (MouseUp Random (Just BLeft) _) =
   liftIO (generate fakeRandomUIState) >>= continue
 mouseEvent uis@UIState {bp = b, sm = p, cl = l} (MouseUp Run (Just BLeft) _) =
@@ -60,17 +56,17 @@ mouseEvent uis@UIState {bp = b, sm = p, cl = l} (MouseUp Run (Just BLeft) _) =
 mouseEvent uis _ = continue uis
 
 addPrewire :: Point -> UIState -> UIState
-addPrewire p' uis@UIState {pw = []} = uis {pw = [p']}
-addPrewire p' uis@UIState {pw = pw@(p : _)}
-  | p' `adjacentTo` p = uis {pw = p' : pw}
+addPrewire p' uis@UIState {hl = []} = uis {hl = [p']}
+addPrewire p' uis@UIState {hl = pw@(p : _)}
+  | p' `adjacentTo` p = uis {hl = p' : pw}
   | p' == p = uis
-  | otherwise = uis {pw = [p']}
+  | otherwise = uis {hl = [p']}
 
 resetPrewire :: UIState -> UIState
-resetPrewire uis = uis {pw = []}
+resetPrewire uis = uis {hl = []}
 
 validPrewire :: UIState -> Bool
-validPrewire UIState {pw = pw} = length pw <= 3
+validPrewire UIState {hl = pw} = length pw <= 3
 
 stepUIState :: UIState -> UIState
 stepUIState uis@UIState {bp = b, cr = r, ss = s} = uis {cr = r', ss = s'}

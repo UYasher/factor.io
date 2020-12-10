@@ -19,30 +19,47 @@ import UITypes
 import Wire
 
 renderUI :: UIState -> [Widget Name]
-renderUI uis =
-  [ C.center $
-      renderLeftBoard uis
-        <+> renderFactory uis
-        <+> padLeft (Pad 1) (renderSideBoard uis)
-  ]
+renderUI uis@UIState {cl = l} =
+  case l of
+    Debug ->
+      [ C.center $
+          renderLeftBoard uis
+            <+> renderFactory uis
+            <+> padLeft (Pad 1) (renderSideBoard uis)
+      ]
+    Menu -> [menu]
+
+-- Render Menu
+menu :: Widget Name
+menu =
+  C.center (C.hCenter (str title) <=> C.hCenter (padTop (Pad 3) (clickable (Move Debug) (button "Sandbox Mode"))))
+
+button :: String -> Widget Name
+button s = addBoldBorder "" . vLimit 3 . hLimit 50 . C.center $ str s
 
 -- Render Info boxes on the Left
 renderLeftBoard :: UIState -> Widget Name
 renderLeftBoard UIState {ss = s, cl = l} =
   padRight (Pad 1) $
-    clickable Run (renderSimpleBox "run")
-      <=> clickable Random (renderSimpleBox "Random\npuzzle")
-      <=> renderDebug l (renderSimpleBox s)
+    clickable Run (renderSimpleBox "" "run")
+      <=> clickable Random (renderSimpleBox "" "Random puzzle")
+      <=> renderDebug l (renderSimpleBox "Debug" s)
+      <=> renderSimpleBox
+        "Info"
+        "m           -- menu \n\
+        \space       -- clear \n\
+        \right click -- erase \n\
+        \q           -- quit  "
   where
-    renderSimpleBox s =
-      addBoldBorder "" . vLimit 3 . hLimit 12 . C.center $ str s
+    renderSimpleBox t s =
+      addBoldBorder t . vLimit 3 . hLimit 23 . C.center $ str s
 
 -- Render Selection boxes on the right
 renderSideBoard :: UIState -> Widget Name
 renderSideBoard UIState {cl = l} =
   opSelectBox <=> renderDebug l sinkSelectBox
   where
-    opSelectBox = addBoldBorder "" . machineList $ opMachines ++ wireMachines
+    opSelectBox = addBoldBorder "" (machineList $ opMachines ++ wireMachines)
     sinkSelectBox = addBoldBorder "Debug" $ machineList goalMachines -- Debug!
     machineList l = vBox [selectable m | m <- l]
     selectable m = clickable (Select m) $ renderMachineSelector m
@@ -70,18 +87,22 @@ renderFactory uis@UIState {bp = b} =
 renderCell :: Point -> UIState -> Widget n
 renderCell p uis@UIState {bp = b, cr = r} =
   case cellTypeAt b p of
-    Blueprint.Fixed -> withAttr pwOverlay $ str filled
-    Empty -> withAttr pwOverlay $ str empty
-    Machine m@(Sink _) -> withAttr (pwOverlay <> sinkAttr m uis) . str $ drawMachine m
-    Machine m -> withAttr (pwOverlay <> machineAttr m) $ renderWithOverlay i $ drawMachine m |*| i
+    Blueprint.Fixed -> withAttr highlight $ str filled
+    Empty -> withAttr highlight $ str empty
+    Machine m@(Sink _) ->
+      withAttr (highlight <> sinkAttr m uis) . str $ drawMachine m
+    Machine m ->
+      withAttr (highlight <> machineAttr m)
+        . renderWithOverlay i
+        $ drawMachine m |*| i
   where
-    pwOverlay = renderPreWire p uis
+    highlight = renderPreWire p uis
     h = evalState (getHoriz p) r
     v = evalState (getVert p) r
     i = h <|> v
 
 renderPreWire :: Point -> UIState -> AttrName
-renderPreWire p UIState {pw = preWires} =
+renderPreWire p UIState {hl = preWires} =
   if p `elem` preWires then preWire else mempty
 
 renderWithOverlay :: Maybe Int -> String -> Widget n
