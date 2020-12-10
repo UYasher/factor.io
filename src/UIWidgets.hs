@@ -49,7 +49,7 @@ renderSideBoard UIState {cl = l} =
 
 renderMachineSelector :: Machine -> Widget n
 renderMachineSelector m =
-  machineAttr m (str $ drawMachine m) <+> showNumMachines Nothing
+  withAttr (machineAttr m) (str $ drawMachine m) <+> showNumMachines Nothing
 
 showNumMachines :: Maybe Int -> Widget n
 showNumMachines Nothing =
@@ -70,28 +70,29 @@ renderFactory uis@UIState {bp = b} =
 renderCell :: Point -> UIState -> Widget n
 renderCell p uis@UIState {bp = b, cr = r} =
   case cellTypeAt b p of
-    Blueprint.Fixed -> str filled
-    Empty -> renderPreWire p uis $ str empty
-    Machine m@(Sink _) -> sinkAttr m uis . str $ drawMachine m
-    Machine m -> renderWithOverlay i m $ drawMachine m |*| i
+    Blueprint.Fixed -> withAttr pwOverlay $ str filled
+    Empty -> withAttr pwOverlay $ str empty
+    Machine m@(Sink _) -> withAttr (pwOverlay <> sinkAttr m uis) . str $ drawMachine m
+    Machine m -> withAttr (pwOverlay <> machineAttr m) $ renderWithOverlay i $ drawMachine m |*| i
   where
+    pwOverlay = renderPreWire p uis
     h = evalState (getHoriz p) r
     v = evalState (getVert p) r
     i = h <|> v
 
-renderPreWire :: Point -> UIState -> Widget n -> Widget n
+renderPreWire :: Point -> UIState -> AttrName
 renderPreWire p UIState {pw = preWires} =
-  if p `elem` preWires then withAttr preWire else id
+  if p `elem` preWires then preWire else mempty
 
-renderWithOverlay :: Maybe Int -> Machine -> String -> Widget n
-renderWithOverlay Nothing m s = machineAttr m $ str s
-renderWithOverlay (Just i) m s =
-  machineAttr m (str top)
-    <=> ( machineAttr m (str midLeft)
+renderWithOverlay :: Maybe Int -> String -> Widget n
+renderWithOverlay Nothing s = str s
+renderWithOverlay (Just i) s =
+  str top
+    <=> ( str midLeft
             <+> withAttr flow (str num)
-            <+> machineAttr m (str midRight)
+            <+> str midRight
         )
-    <=> machineAttr m (str bot)
+    <=> str bot
   where
     rows = lines s
     top = head rows
