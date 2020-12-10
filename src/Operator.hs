@@ -5,7 +5,7 @@ import Geometry
 -- | `Operator`'s manipulate numbers to produce new numbers. There is a fixed
 -- number, with pre-defined behavior
 data Operator = Add | Subtract | Multiply | Divide | Modulo | Factor | Duplicate
-  deriving (Eq, Show, Read, Ord)
+  deriving (Eq, Show, Read, Ord, Enum, Bounded)
 
 -- | Converts an operator into a function that will manipulate numbers in
 -- the "correct" way. (eg, the `Add` function adds its operands)

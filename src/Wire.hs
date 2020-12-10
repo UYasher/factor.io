@@ -6,7 +6,7 @@ import ResourceUpdate
 import State
 
 -- | Gives the direction a wire runs, which determines what wires it connects to and propagates values to
-data WireType = Vertical | Horizontal | NE | SE | SW | NW | Overlap
+data WireType = Vertical | Horizontal | NW | NE | Overlap | SW | SE
   deriving (Eq, Show, Read, Enum, Bounded, Ord)
 
 -- | Returns True iff the given wire can propagate values to the north

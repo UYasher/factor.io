@@ -19,7 +19,7 @@ data UIState = UIState
     cr :: Resources, -- Current Resource
     ss :: String, -- Status String
     cl :: Layer, -- Current Layer
-    wd :: UIWireDirection -- User Wire Placement
+    wd :: [Point] -- User Wire Placement
   }
 
 initUIState :: IO UIState
@@ -29,14 +29,12 @@ initUIState = do
   let r = emptyResources
   let s = "Empty"
   let l = Debug
-  let w = NS
+  let w = []
   return $ UIState b m r s l w
 
 data Tick = Tick
 
 data Layer = Menu | Campaign | Debug
-
-data UIWireDirection = NS | EW
 
 data Name = Board | Select {name :: Machine} | Run | Random
   deriving (Eq, Ord)

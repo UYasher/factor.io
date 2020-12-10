@@ -108,10 +108,10 @@ renderDebug _ w = emptyWidget
 
 -- | Lists of machines
 opMachines :: [Machine]
-opMachines = Op <$> [Add, Subtract, Multiply, Divide, Modulo, Factor, Duplicate]
+opMachines = Op <$> (enumFrom minBound :: [Operator])
 
 wireMachines :: [Machine]
-wireMachines = Wire <$> [Vertical, Horizontal, NW, NE, Overlap, SW, SE]
+wireMachines = Wire <$> (enumFrom minBound :: [WireType])
 
 -- | Sinks and Sources. For Debugging purposes.
 goalMachines :: [Machine]

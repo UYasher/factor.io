@@ -21,8 +21,6 @@ handleEvent uis _ = continue uis
 
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
-keyEvent uis@UIState {wd = NS} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = EW}
-keyEvent uis@UIState {wd = EW} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = NS}
 keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) = liftIO initUIState >>= continue
 keyEvent uis _ = continue uis
 
@@ -123,5 +121,5 @@ fakeRandomUIState = do
   let r = emptyResources
   let s = "Hello!"
   let l = Debug
-  let w = NS
+  let w = []
   return $ UIState b m r s l w

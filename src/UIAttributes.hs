@@ -17,10 +17,11 @@ theMap =
       (source, fg brightYellow),
       (sink, fg red),
       (solvedSink, fg brightGreen),
-      (flow, fg brightWhite)
+      (flow, fg brightWhite),
+      (preWire, bg yellow)
     ]
 
-wire, operator, occupied, source, sink, solvedSink, flow :: AttrName
+wire, operator, occupied, source, sink, solvedSink, flow, preWire :: AttrName
 wire = attrName "wire"
 operator = attrName "operator"
 source = attrName "source"
@@ -28,6 +29,7 @@ sink = attrName "sink"
 solvedSink = attrName "solvedSink"
 occupied = attrName "occupied"
 flow = attrName "flow"
+preWire = attrName "preWire"
 
 sinkAttr :: Machine -> UIState -> Widget n -> Widget n
 sinkAttr (Sink _) UIState {bp = b, cr = r} =
