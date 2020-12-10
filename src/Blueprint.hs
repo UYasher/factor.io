@@ -125,12 +125,11 @@ placePrewiresAt (x : y : z : rest) b
   | not (isInBounds x b && isInBounds y b && isInBounds z b) = b
   | not $ isEditable y b = b
   | otherwise =
-    case getMachineAt y b of
-      Just (Wire w) ->
-        let recursed = placePrewiresAt (y : z : rest) b
-         in placeMachineAt y (Wire $ wireFromTo x y z `placeOnto` w) recursed
-      Nothing ->
-        let recursed = placePrewiresAt (y : z : rest) b
-         in placeMachineAt y (Wire $ wireFromTo x y z) recursed
-      _ -> b
+    let recursed = placePrewiresAt (y : z : rest) b
+     in case getMachineAt y recursed of
+          Just (Wire w) ->
+            placeMachineAt y (Wire $ wireFromTo x y z `placeOnto` w) recursed
+          Nothing ->
+            placeMachineAt y (Wire $ wireFromTo x y z) recursed
+          _ -> b
 placePrewiresAt _ b = b

@@ -237,6 +237,7 @@ prop_placeDidPlace m = do
   let b' = placeMachineAt p m b
   return $ b /= b' ==> Just m == getMachineAt p b'
 
+-- NOTE: got a failure once, then got this function passing over separate runs
 prop_removeDidRemove :: Gen Property
 prop_removeDidRemove = do
   b <- blueprintWithMachines
