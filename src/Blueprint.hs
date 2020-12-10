@@ -8,6 +8,7 @@ import Geometry
 import Machine
 import ResourceUpdate
 import State
+import Wire
 
 data Blueprint = Blueprint
   { fixedPoints :: Set.Set Point,
@@ -113,3 +114,23 @@ makeBudgetFrom Blueprint {grid = g} = Map.foldr aux zeroBudget g
       case machineBudgetField m of
         Nothing -> b
         Just s -> Budget.set s (Budget.get s b + 1) b
+
+-- | Places wires in the blueprint from the "Prewiring" mode in the UI.
+-- Assumes that the most recent wire (ie the "end" of the drawn path) is at the
+-- front of the list, and the oldest wire (ie the "start" of the drawn path)
+-- is at the tail of the list
+placePrewiresAt :: [Point] -> Blueprint -> Blueprint
+placePrewiresAt (x : y : z : rest) b
+  | not (x `adjacentTo` y && y `adjacentTo` z) = b
+  | not (isInBounds x b && isInBounds y b && isInBounds z b) = b
+  | not $ isEditable y b = b
+  | otherwise =
+    case getMachineAt y b of
+      Just (Wire w) ->
+        let recursed = placePrewiresAt (y : z : rest) b
+         in placeMachineAt y (Wire $ wireFromTo x y z `placeOnto` w) recursed
+      Nothing ->
+        let recursed = placePrewiresAt (y : z : rest) b
+         in placeMachineAt y (Wire $ wireFromTo x y z) recursed
+      _ -> b
+placePrewiresAt _ b = b

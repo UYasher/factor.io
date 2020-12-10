@@ -75,3 +75,40 @@ currentBends SE = True
 currentBends SW = True
 currentBends NW = True
 currentBends _ = False
+
+data Ordinal = North | South | East | West
+
+ordinal :: Point -> Ordinal
+ordinal (Point 0 1) = North
+ordinal (Point 0 (-1)) = South
+ordinal (Point 1 0) = East
+ordinal (Point 0 1) = West
+ordinal _ = error "impossible. programmer error"
+
+-- | Returns a wire that lets current flow through the sequence of `Points`
+wireFromTo :: Point -> Point -> Point -> WireType
+wireFromTo x y z = aux (ordinal $ x ->> y) (ordinal $ z ->> y)
+  where
+    aux North North = Vertical
+    aux North South = Vertical
+    aux North East = NE
+    aux North West = NW
+    aux South North = Vertical
+    aux South South = Vertical
+    aux South East = SE
+    aux South West = SW
+    aux East North = NE
+    aux East South = SE
+    aux East East = Horizontal
+    aux East West = Horizontal
+    aux West North = NW
+    aux West South = SW
+    aux West East = Horizontal
+    aux West West = Horizontal
+
+-- | Places the first argument onto the second argument, to fuse them if possible.
+-- Returns the first argument if fusion is not possible
+placeOnto :: WireType -> WireType -> WireType
+placeOnto Horizontal Vertical = Overlap
+placeOnto Vertical Horizontal = Overlap
+placeOnto x _ = x
