@@ -71,13 +71,17 @@ renderCell :: Point -> UIState -> Widget n
 renderCell p uis@UIState {bp = b, cr = r} =
   case cellTypeAt b p of
     Blueprint.Fixed -> str filled
-    Empty -> str empty
+    Empty -> renderPreWire p uis $ str empty
     Machine m@(Sink _) -> sinkAttr m uis . str $ drawMachine m
     Machine m -> renderWithOverlay i m $ drawMachine m |*| i
   where
     h = evalState (getHoriz p) r
     v = evalState (getVert p) r
     i = h <|> v
+
+renderPreWire :: Point -> UIState -> Widget n -> Widget n
+renderPreWire p UIState {pw = preWires} =
+  if p `elem` preWires then withAttr preWire else id
 
 renderWithOverlay :: Maybe Int -> Machine -> String -> Widget n
 renderWithOverlay Nothing m s = machineAttr m $ str s

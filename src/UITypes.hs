@@ -19,7 +19,7 @@ data UIState = UIState
     cr :: Resources, -- Current Resource
     ss :: String, -- Status String
     cl :: Layer, -- Current Layer
-    wd :: [Point] -- User Wire Placement
+    pw :: [Point] -- Prewires
   }
 
 initUIState :: IO UIState

@@ -15,21 +15,22 @@ import UITypes
 handleEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 handleEvent uis e@(VtyEvent (EvKey _ _)) = keyEvent uis e
 handleEvent uis e@MouseUp {} = mouseEvent uis e
+handleEvent uis e@MouseDown {} = mouseEvent uis e
 handleEvent uis@UIState {ss = "Running"} (AppEvent Tick) =
   continue $ stepUIState uis
 handleEvent uis _ = continue uis
 
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
-<<<<<<< HEAD
-=======
-keyEvent uis@UIState {wd = NS} (VtyEvent (EvKey (KChar 'f') [])) = continue $ uis {wd = EW}
-keyEvent uis@UIState {wd = EW} (VtyEvent (EvKey (KChar 'f') [])) = continue $ uis {wd = NS}
->>>>>>> f246e7fd343e0e6b2a2e2969f56470724fbf139c
+keyEvent uis (VtyEvent (EvKey (KChar ' ') [])) = continue $ uis {pw = []}
 keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) = liftIO initUIState >>= continue
 keyEvent uis _ = continue uis
 
 mouseEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
+mouseEvent uis@UIState {sm = (Just (Wire _))} (MouseDown Board BLeft _ l) =
+  continue $ addPreWire (tf l) uis
+mouseEvent uis@UIState {pw = p, sm = (Just (Wire _))} (MouseUp Board (Just BLeft) l) =
+  if length p < 3 then continue $ resetPreWire uis else continue uis
 mouseEvent uis (MouseUp (Select m) _ _) = continue $ uis {sm = Just m}
 mouseEvent uis@UIState {bp = b, sm = (Just m)} (MouseUp Board (Just BLeft) l) =
   continue $ addToBoard l uis m b
@@ -39,6 +40,20 @@ mouseEvent _ (MouseUp Random (Just BLeft) _) =
   liftIO (generate fakeRandomUIState) >>= continue
 mouseEvent uis@UIState {bp = b, sm = p, cl = l} (MouseUp Run (Just BLeft) _) =
   continue $ uis {cr = emptyResources, ss = "Running"}
+mouseEvent uis _ = continue uis
+
+addPreWire :: Point -> UIState -> UIState
+addPreWire p' uis@UIState {pw = []} = uis {pw = [p']}
+addPreWire p' uis@UIState {pw = pw@(p : _)}
+  | p' `adjacentTo` p = uis {pw = p' : pw}
+  | p' == p = uis
+  | otherwise = uis {pw = [p']}
+
+resetPreWire :: UIState -> UIState
+resetPreWire uis = uis {pw = []}
+
+validPreWire :: UIState -> Bool
+validPreWire UIState {pw = pw} = length pw <= 3
 
 stepUIState :: UIState -> UIState
 stepUIState uis@UIState {bp = b, cr = r, ss = s} = uis {cr = r', ss = s'}
