@@ -19,17 +19,8 @@ wireTests = do
 instance Arbitrary WireType where
   arbitrary = elements [Vertical, Horizontal, NE, SE, SW, NW, Overlap]
 
--- Easy way to generate adjacent points, which Wire uses a lot
-data Direction = North | South | East | West deriving (Show)
-
 instance Arbitrary Direction where
   arbitrary = elements [North, South, East, West]
-
-dirToPoint :: Direction -> Point
-dirToPoint North = Point 0 1
-dirToPoint East = Point 1 0
-dirToPoint South = Point 0 (-1)
-dirToPoint West = Point (-1) 0
 
 prop_overlapNextPointFrom :: Direction -> Point -> Bool
 prop_overlapNextPointFrom dir p =
