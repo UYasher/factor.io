@@ -1,6 +1,7 @@
 module Blueprint where
 
 import Brick.Types (Location (..))
+import Budget
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Geometry
@@ -12,6 +13,7 @@ data Blueprint = Blueprint
   { fixedPoints :: Set.Set Point,
     grid :: Grid Machine,
     minimumSinksToSatisfy :: Int,
+    budget :: Budget,
     width :: Int,
     height :: Int
   }
@@ -20,7 +22,7 @@ data Blueprint = Blueprint
 data CellType = Fixed | Empty | Machine {machine :: Machine}
 
 blankBlueprint :: Int -> Int -> Blueprint
-blankBlueprint = Blueprint Set.empty Map.empty 0
+blankBlueprint = Blueprint Set.empty Map.empty 0 zeroBudget
 
 -- Operations to Edit Factories
 
@@ -101,3 +103,13 @@ isSatisfied Blueprint {grid = grid, minimumSinksToSatisfy = n} r =
   where
     aux (p, Sink x) r = if Just x == evalState (getVert p) r then 1 else 0
     aux (_, _) _ = 0
+
+-- | Makes a `Budget` that exactly describes the given `Blueprint`
+makeBudgetFrom :: Blueprint -> Budget
+makeBudgetFrom Blueprint {grid = g} = Map.foldr aux zeroBudget g
+  where
+    aux :: Machine -> Budget -> Budget
+    aux m b =
+      case machineBudgetField m of
+        Nothing -> b
+        Just s -> Budget.set s (Budget.get s b + 1) b

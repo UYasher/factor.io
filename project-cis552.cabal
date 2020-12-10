@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Ascii
+      Budget
       Blueprint
       BlueprintParsing
       Factory
@@ -83,6 +84,7 @@ test-suite project-cis552-test
   other-modules:
       BlueprintParsingTests
       BlueprintTests
+      BudgetTests
       FactoryTests
       GeometryTests
       MachineTests

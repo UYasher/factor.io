@@ -43,8 +43,8 @@ wireToChar Vertical = '|'
 wireToChar Horizontal = '-'
 wireToChar NE = '⌞'
 wireToChar SE = '⌜'
-wireToChar SW = '⌟'
-wireToChar NW = '⌞'
+wireToChar SW = '⌝'
+wireToChar NW = '⌟'
 wireToChar Overlap = '+'
 
 allNextPoints :: WireType -> [Point]
