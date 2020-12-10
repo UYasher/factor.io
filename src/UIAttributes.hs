@@ -31,15 +31,15 @@ occupied = attrName "occupied"
 flow = attrName "flow"
 preWire = attrName "preWire"
 
-sinkAttr :: Machine -> UIState -> Widget n -> Widget n
+sinkAttr :: Machine -> UIState -> AttrName
 sinkAttr (Sink _) UIState {bp = b, cr = r} =
-  if isSatisfied b r then withAttr solvedSink else withAttr sink
+  if isSatisfied b r then solvedSink else sink
 
-machineAttr :: Machine -> Widget n -> Widget n
+machineAttr :: Machine -> AttrName
 machineAttr m =
   case m of
-    Op _ -> withAttr operator
-    Wire _ -> withAttr wire
-    Occupied -> withAttr occupied
-    Source _ -> withAttr source
-    Sink _ -> withAttr sink
+    Op _ -> operator
+    Wire _ -> wire
+    Occupied -> occupied
+    Source _ -> source
+    Sink _ -> sink
