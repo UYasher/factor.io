@@ -76,18 +76,24 @@ currentBends SW = True
 currentBends NW = True
 currentBends _ = False
 
-data Ordinal = North | South | East | West
+data Direction = North | South | East | West deriving (Show)
 
-ordinal :: Point -> Ordinal
-ordinal (Point 0 1) = North
-ordinal (Point 0 (-1)) = South
-ordinal (Point 1 0) = East
-ordinal (Point 0 1) = West
-ordinal _ = error "impossible. programmer error"
+pointToDir :: Point -> Direction
+pointToDir (Point 0 1) = North
+pointToDir (Point 0 (-1)) = South
+pointToDir (Point 1 0) = East
+pointToDir (Point (-1) 0) = West
+pointToDir _ = error "impossible. programmer error"
+
+dirToPoint :: Direction -> Point
+dirToPoint North = Point 0 1
+dirToPoint East = Point 1 0
+dirToPoint South = Point 0 (-1)
+dirToPoint West = Point (-1) 0
 
 -- | Returns a wire that lets current flow through the sequence of `Points`
 wireFromTo :: Point -> Point -> Point -> WireType
-wireFromTo x y z = aux (ordinal $ x ->> y) (ordinal $ z ->> y)
+wireFromTo x y z = aux (pointToDir $ x ->> y) (pointToDir $ z ->> y)
   where
     aux North North = Vertical
     aux North South = Vertical
