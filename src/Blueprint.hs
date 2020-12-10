@@ -128,7 +128,8 @@ placePrewiresAt (x : y : z : rest) b
     let recursed = placePrewiresAt (y : z : rest) b
      in case getMachineAt y recursed of
           Just (Wire w) ->
-            placeMachineAt y (Wire $ wireFromTo x y z `placeOnto` w) recursed
+            let recursed' = removeMachineAt y recursed
+             in placeMachineAt y (Wire $ wireFromTo x y z `placeOnto` w) recursed'
           Nothing ->
             placeMachineAt y (Wire $ wireFromTo x y z) recursed
           _ -> b
