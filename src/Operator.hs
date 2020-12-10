@@ -51,3 +51,12 @@ opToChar Divide = '/'
 opToChar Modulo = '%'
 opToChar Factor = 'F'
 opToChar Duplicate = 'D'
+
+opBudgetField :: Operator -> String
+opBudgetField Add = "add"
+opBudgetField Subtract = "subtract"
+opBudgetField Multiply = "multiply"
+opBudgetField Divide = "divide"
+opBudgetField Modulo = "modulo"
+opBudgetField Factor = "factor"
+opBudgetField Duplicate = "duplicate"

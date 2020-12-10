@@ -61,6 +61,13 @@ allOccupied :: Machine -> [Point]
 allOccupied (Op op) = [zero] ++ opInputs op ++ opOutputs op
 allOccupied _ = [zero]
 
+machineBudgetField :: Machine -> Maybe String
+machineBudgetField (Source _) = Just "source"
+machineBudgetField (Sink _) = Just "sink"
+machineBudgetField (Op op) = Just $ opBudgetField op
+machineBudgetField Occupied = Nothing
+machineBudgetField (Wire _) = Just "wire"
+
 -- -- | Tells a machine to perform a state update at the specified point.
 -- -- | (The point must be specified because machines calculate space relative to
 -- -- | their local origin, which means they don't know where they are globally.)

@@ -21,8 +21,8 @@ handleEvent uis _ = continue uis
 
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
-keyEvent uis@UIState {wd = NS} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = EW}
-keyEvent uis@UIState {wd = EW} (VtyEvent (EvKey (KChar 'f') [])) = uis {wd = NS}
+keyEvent uis@UIState {wd = NS} (VtyEvent (EvKey (KChar 'f') [])) = continue $ uis {wd = EW}
+keyEvent uis@UIState {wd = EW} (VtyEvent (EvKey (KChar 'f') [])) = continue $ uis {wd = NS}
 keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) = liftIO initUIState >>= continue
 keyEvent uis _ = continue uis
 
