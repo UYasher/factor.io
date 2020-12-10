@@ -40,7 +40,7 @@ renderLeftBoard UIState {ss = s, cl = l} =
 -- Render Selection boxes on the right
 renderSideBoard :: UIState -> Widget Name
 renderSideBoard UIState {cl = l} =
-  opSelectBox <+> renderDebug l (padLeft (Pad 1) sinkSelectBox)
+  opSelectBox <=> renderDebug l sinkSelectBox
   where
     opSelectBox = addBoldBorder "" . machineList $ opMachines ++ wireMachines
     sinkSelectBox = addBoldBorder "Debug" $ machineList goalMachines -- Debug!
@@ -115,7 +115,7 @@ opMachines :: [Machine]
 opMachines = Op <$> (enumFrom minBound :: [Operator])
 
 wireMachines :: [Machine]
-wireMachines = Wire <$> (enumFrom minBound :: [WireType])
+wireMachines = [Wire Horizontal]
 
 -- | Sinks and Sources. For Debugging purposes.
 goalMachines :: [Machine]
