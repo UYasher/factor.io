@@ -5,7 +5,7 @@ import Blueprint
 import Brick.AttrMap
 import Brick.Types hiding (Horizontal, Vertical)
 import Brick.Widgets.Border as B
-import Brick.Widgets.Border.Style as BS (unicodeBold)
+import Brick.Widgets.Border.Style as BS (unicode, unicodeBold)
 import Brick.Widgets.Center as C
 import Brick.Widgets.Core as WC
 import Control.Applicative ((<|>))
@@ -32,10 +32,17 @@ renderUI uis@UIState {cl = l} =
 -- Render Menu
 menu :: Widget Name
 menu =
-  C.center (C.hCenter (str title) <=> C.hCenter (padTop (Pad 3) (clickable (Move Debug) (button "Sandbox Mode"))))
+  C.center
+    ( C.hCenter (str title)
+        <=> C.hCenter
+          ( padTop (Pad 3) $ clickable (Move Debug) (button "Sandbox Mode")
+          )
+        <=> C.hCenter
+          (padTop (Pad 1) $ button "Credits")
+    )
 
 button :: String -> Widget Name
-button s = addBoldBorder "" . vLimit 3 . hLimit 50 . C.center $ str s
+button s = addBorder "" . vLimit 3 . hLimit 50 . C.center $ str s
 
 -- Render Info boxes on the Left
 renderLeftBoard :: UIState -> Widget Name
@@ -127,6 +134,9 @@ renderWithOverlay (Just i) s =
 
 addBoldBorder :: String -> Widget n -> Widget n
 addBoldBorder s = withBorderStyle BS.unicodeBold . B.borderWithLabel (str s)
+
+addBorder :: String -> Widget n -> Widget n
+addBorder s = withBorderStyle BS.unicode . B.borderWithLabel (str s)
 
 renderDebug :: Layer -> Widget n -> Widget n
 renderDebug Debug w = w
