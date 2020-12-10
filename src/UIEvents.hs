@@ -13,26 +13,41 @@ import Test.QuickCheck.Gen
 import UITypes
 
 handleEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
-handleEvent uis e@(VtyEvent (EvKey _ _)) = keyEvent uis e
-handleEvent uis e@MouseUp {} = mouseEvent uis e
-handleEvent uis e@MouseDown {} = mouseEvent uis e
-handleEvent uis@UIState {ss = "Running"} (AppEvent Tick) =
-  continue $ stepUIState uis
-handleEvent uis _ = continue uis
+handleEvent uis e = case (uis, e) of
+  (uis, e@(VtyEvent (EvKey _ _))) -> keyEvent uis e
+  (uis, e@MouseUp {}) -> mouseEvent uis e
+  (uis, e@MouseDown {}) -> mouseEvent uis e
+  (uis@UIState {ss = "Running"}, AppEvent Tick) -> continue $ stepUIState uis
+  (uis, _) -> continue uis
+
+-- handleEvent uis e@(VtyEvent (EvKey _ _)) = keyEvent uis e
+-- handleEvent uis e@MouseUp {} = mouseEvent uis e
+-- handleEvent uis e@MouseDown {} = mouseEvent uis e
+-- handleEvent uis@UIState {ss = "Running"} (AppEvent Tick) =
+--   continue $ stepUIState uis
+-- handleEvent uis _ = continue uis
 
 keyEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 keyEvent uis (VtyEvent (EvKey (KChar 'q') [])) = halt uis
-keyEvent uis@UIState {bp = b, pw = p} (VtyEvent (EvKey (KChar ' ') [])) = liftIO initUIState >>= continue
-keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) = liftIO initUIState >>= continue
+keyEvent uis@UIState {bp = b, pw = p} (VtyEvent (EvKey (KChar ' ') [])) =
+  liftIO initUIState >>= continue
+keyEvent _ (VtyEvent (EvKey (KChar 'r') [])) =
+  liftIO initUIState >>= continue
 keyEvent uis _ = continue uis
 
 mouseEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
 mouseEvent uis@UIState {sm = (Just (Wire _))} (MouseDown Board BLeft _ l) =
   continue $ addPrewire (tf l) uis
-mouseEvent uis@UIState {bp = b, pw = p, sm = (Just (Wire _))} (MouseUp Board (Just BLeft) l) =
-  continue $ uis {bp = b', pw = []}
-  where
-    b' = placePrewiresAt p b
+mouseEvent
+  uis@UIState
+    { bp = b,
+      pw = p,
+      sm = (Just (Wire _))
+    }
+  (MouseUp Board (Just BLeft) l) =
+    continue $ uis {bp = b', pw = []}
+    where
+      b' = placePrewiresAt p b
 mouseEvent uis (MouseUp (Select m) _ _) = continue $ uis {sm = Just m}
 mouseEvent uis@UIState {bp = b, sm = (Just m)} (MouseUp Board (Just BLeft) l) =
   continue $ addToBoard l uis m b
