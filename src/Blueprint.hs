@@ -46,6 +46,10 @@ displaceMachineAt p d b =
           b'' = placeMachineAt (p +>> d) m b'
        in if b == b' || b' == b'' || b == b'' then b else b''
 
+-- | Utility for getting all points that are in the bounds of the board
+allPoints :: Blueprint -> [Point]
+allPoints b = [Point x y | x <- [0 .. width b - 1], y <- [0 .. height b - 1]]
+
 getMachineAt :: Point -> Blueprint -> Maybe Machine
 getMachineAt p Blueprint {grid = grid} = Map.lookup p grid
 

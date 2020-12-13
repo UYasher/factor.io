@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 55f973d08e898c3428202bffcc8e3c690e7299b61526ee6a68ab79e1dfd4febb
+-- hash: f59e743a457efe5f7918bac8ec2329c5ad4cb973765faa32cda975b15e59b687
 
 name:           project-cis552
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
       BlueprintParsing
       Factory
       Geometry
+      GraphUtils
       Lib
       Machine
       Operator
@@ -75,6 +76,7 @@ test-suite project-cis552-test
       BlueprintTests
       FactoryTests
       GeometryTests
+      GraphUtilsTests
       MachineTests
       OperatorTests
       ResourceUpdateTests

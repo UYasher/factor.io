@@ -51,14 +51,13 @@ blueprintOfOps = do
   height <- (3 +) . abs <$> arbitrary
   operators <- (arbitrary `suchThat` (\l -> length l > 10) :: Gen [Operator]) -- not sure 10 is the right number. Maybe a function of height and width?
   let machines = Op <$> operators
-  -- fixed <- Set.fromList <$> boundedPoints width height -- not sure this is needed or if this has undesirable behavior
   fixed <- elements [Set.empty :: Set Point]
   let base = blankBlueprint width height
   -- subtracting from and adding to the height allows us to guarantee that all inputs/outputs are reachable
   let placeInBounds = placeMachineAt . (+>> Point 0 1) . wrapInBounds width (height - 3)
   points <- (arbitrary `suchThat` (\l -> length l == length machines) :: Gen [Point])
   let addCMDs = zipWith ($) (Prelude.map placeInBounds points) machines
-  let withMachines = Prelude.foldr (\m b -> m b) base addCMDs -- this only generates the arbitrary once, then tries to place everything there
+  let withMachines = Prelude.foldr (\m b -> m b) base addCMDs
   return withMachines {fixedPoints = fixed}
 
 isOp :: Machine -> Bool
@@ -146,12 +145,6 @@ addSourceAbove p b = do placeMachineAt (p +>> Point 0 1) <$> (Source . (`mod` 64
 connectOutputToInput :: Blueprint -> Point -> Point -> Blueprint
 connectOutputToInput = undefined
 
--- | Finds the shortest way to add wires to a blueprint to connect an output and an input
---     Grid            target   queued     visited    Nothing if we reach a dead end, otherwise the path we took to the goal
-bfs :: Grid Machine -> Point -> [Point] -> [Point] -> Maybe [Point]
-bfs _ _ [] _ = Nothing
-bfs g t q v = undefined
-
 connectBlueprint :: Gen Blueprint -> Gen Blueprint
 connectBlueprint b = do
   b' <- b
@@ -214,8 +207,6 @@ instance Arbitrary Blueprint where
 --     return withMachines {fixedPoints = fixed}
 
 -- Utility functions for asking
-allPoints :: Blueprint -> [Point]
-allPoints b = [Point x y | x <- [0 .. width b - 1], y <- [0 .. height b - 1]]
 
 blueprintWithArea :: Gen Blueprint
 blueprintWithArea = arbitrary `suchThat` (not . Prelude.null . allPoints)

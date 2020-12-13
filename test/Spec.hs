@@ -1,12 +1,12 @@
+import BlueprintParsingTests
 import BlueprintTests
+import FactoryTests
 import GeometryTests
 import Lib
 import MachineTests
 import OperatorTests
 import ResourceUpdateTests
 import WireTests
-import FactoryTests
-import BlueprintParsingTests
 
 main :: IO ()
 main = do
