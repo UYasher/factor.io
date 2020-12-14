@@ -138,8 +138,8 @@ prop_bfsElemsEqualDfsElems g x = (x `GraphUtils.elem` g) ==> GraphUtils.elems b 
     b = bfsFrom g x
     d = dfsFrom g x
 
--- | A test serving as a proxy for the shortest path property of bfs
--- Note: this property runs very close to the 1000 example limit for quickCheck
+-- | A test serving as a proxy for the shortest path property of bfs.
+-- Note: this property runs very close to the 1000 example limit for quickCheck,
 -- you may need to run it a couple of times before passing without timing out.
 prop_bfsPathLength :: Graph -> Int -> Int -> Property
 prop_bfsPathLength g x y =

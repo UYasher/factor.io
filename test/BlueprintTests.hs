@@ -9,6 +9,7 @@ import Data.Set as Set
 import Factory
 import Geometry
 import GeometryTests
+import GraphUtils
 import Machine
 import MachineTests
 import Operator
@@ -142,8 +143,56 @@ placeSinksAtOpenOutputs b = Prelude.foldr ($) b placeSinkCmds
 addSourceAbove :: Point -> Gen Blueprint -> Gen Blueprint
 addSourceAbove p b = do placeMachineAt (p +>> Point 0 1) <$> (Source . (`mod` 64) <$> arbitrary) <*> b
 
-connectOutputToInput :: Blueprint -> Point -> Point -> Blueprint
-connectOutputToInput = undefined
+connectOutputToOneOf :: Blueprint -> Point -> [Point] -> Gen Blueprint
+connectOutputToOneOf b p ys = Prelude.foldr placeWire b <$> wiresToAdd
+  where
+    bfsTree = bfsFrom (blueprintToGraph b) (pointToInt b p)
+    reachable = Prelude.filter (\p -> pointToInt b p `GraphUtils.elem` bfsTree) ys
+    shortestPathInBlueprint q = intToPoint b <$> fromJust ((pointToInt b p ~> pointToInt b q) bfsTree)
+    connection = shortestPathInBlueprint <$> elements reachable
+    wiresToAdd = Prelude.map tripleToWireType . toTriples <$> connection
+    placeWire (p, w) b@Blueprint {grid = g} = placeMachineAt p wire b
+      where
+        wire = case Map.lookup p g of
+          Nothing -> Wire w
+          Just _ -> Wire Overlap
+
+toTriples :: [a] -> [(a, a, a)]
+toTriples [x1, x2, x3] = [(x1, x2, x3)]
+toTriples (x1 : x2 : x3 : xs) = (x1, x2, x3) : toTriples (x2 : x3 : xs)
+toTriples _ = error "List with fewer than 3 elements passed to `toTriples`"
+
+--                   From   Thru   To
+tripleToWireType :: (Point, Point, Point) -> (Point, WireType)
+tripleToWireType (p1, p2, p3) =
+  ( p2,
+    case p2 ->> p1 of
+      Point 0 1 -> case p2 ->> p3 of
+        Point 0 1 -> error "Wire cannot enter and exit same point"
+        Point 0 (-1) -> Vertical
+        Point 1 0 -> NE
+        Point (-1) 0 -> NW
+        _ -> error "Non-adjacent wire triple"
+      Point 0 (-1) -> case p2 ->> p3 of
+        Point 0 1 -> Vertical
+        Point 0 (-1) -> error "Wire cannot enter and exit same point"
+        Point 1 0 -> SE
+        Point (-1) 0 -> SW
+        _ -> error "Non-adjacent wire triple"
+      Point 1 0 -> case p2 ->> p3 of
+        Point 0 1 -> NE
+        Point 0 (-1) -> SE
+        Point 1 0 -> error "Wire cannot enter and exit same point"
+        Point (-1) 0 -> Horizontal
+        _ -> error "Non-adjacent wire triple"
+      Point (-1) 0 -> case p2 ->> p3 of
+        Point 0 1 -> NW
+        Point 0 (-1) -> SW
+        Point 1 0 -> Horizontal
+        Point (-1) 0 -> error "Wire cannot enter and exit same point"
+        _ -> error "Non-adjacent wire triple"
+      _ -> error "Non-adjacent wire triple"
+  )
 
 connectBlueprint :: Gen Blueprint -> Gen Blueprint
 connectBlueprint b = do
@@ -153,7 +202,7 @@ connectBlueprint b = do
       ys@(_ : _) ->
         frequency
           [ (1, placeSinksAtOpenOutputs <$> b), -- Not sure these two methods make sense
-            (10, connectBlueprint $ connectOutputToInput <$> b <*> elements xs <*> elements ys) -- Why doesn't running blueprintTests.hs seem to ever reach this line?
+            (10, connectBlueprint . join $ connectOutputToOneOf <$> b <*> elements xs <*> pure ys) -- Why doesn't running blueprintTests.hs seem to ever reach this line?
           ]
       [] -> placeSinksAtOpenOutputs <$> b
     [] -> case openInputs b' of
@@ -177,7 +226,7 @@ fixSinksAndSources b@Blueprint {grid = g, fixedPoints = ps} = b {fixedPoints = p
 removeUnfixed :: Blueprint -> Blueprint
 removeUnfixed b@Blueprint {grid = g, fixedPoints = ps} = b {grid = g'}
   where
-    g' = Map.filterWithKey (\p _ -> p `elem` ps) g
+    g' = Map.filterWithKey (\p _ -> p `Prelude.elem` ps) g
 
 getNumSinks :: Blueprint -> Int
 getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
@@ -280,7 +329,7 @@ prop_isAvailableAfterDisplace d = do
       || ( case getMachineAt p b of
              Nothing -> False
              Just Occupied -> True
-             Just m -> Geometry.negate d `elem` allOccupied m
+             Just m -> Geometry.negate d `Prelude.elem` allOccupied m
          )
 
 prop_placeDidPlace :: Machine -> Gen Property

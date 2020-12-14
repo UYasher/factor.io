@@ -41,7 +41,7 @@ blueprintToGraph b@Blueprint {grid = g} = Graph $ Map.fromList $ Prelude.map toE
 processTraversal :: Int -> Map Int Int -> Graph
 processTraversal x = Graph . Map.insert x Set.empty . Map.map Set.singleton
 
--- | Run a bfs on a tree, producing a map from children to parents
+-- | Run a dfs on a tree, producing a map from children to parents
 --     graph    root   parents        updated parents
 dfs :: Graph -> Int -> Map Int Int -> Map Int Int
 dfs g x parents = Prelude.foldr aux parents (children g [x])
@@ -51,7 +51,7 @@ dfs g x parents = Prelude.foldr aux parents (children g [x])
         then parents'
         else dfs g child (Map.insert child x parents')
 
--- | Runs a dfs on the a graph starting from the specified node.
+-- | Runs a dfs on the graph starting from the specified node.
 -- The resulting graph will be the transpose of the dfs tree
 dfsFrom :: Graph -> Int -> Graph
 dfsFrom g x = processTraversal x $ dfs g x Map.empty
@@ -66,7 +66,7 @@ bfs g xs parents = bfs g xs' parents'
     parents' = Prelude.foldr addChildrenToParents parents xs
     addChildrenToParents x m = Prelude.foldr (`insertIfNew` x) m (children g [x])
 
--- | Runs a bfs on the a graph starting from the specified node.
+-- | Runs a bfs on the graph starting from the specified node.
 -- The resulting graph will be the transpose of the bfs tree
 bfsFrom :: Graph -> Int -> Graph
 bfsFrom g x = processTraversal x $ bfs g [x] Map.empty
@@ -104,3 +104,17 @@ transpose g@(Graph m) = Graph $ Set.fromList <$> Set.foldr aux (Map.map (const [
     aux x m' = case Map.lookup x m of
       Nothing -> m'
       Just s -> Set.foldr (\x' m' -> Map.insertWith (++) x' [x] m') m' s
+
+-- | Find the path between two points in the transpose of a bfs tree, if it exists.
+-- Expects, but does not check, that the given graph is transpose of a bfs tree.
+(~>) :: Int -> Int -> Graph -> Maybe [Int]
+x ~> y = \(Graph m) -> reverse <$> path x y m
+  where
+    path p q m = case Map.lookup q m of
+      Nothing -> Nothing
+      Just s -> case Set.toList s of
+        p' : _ | p' == p -> Just [p]
+        p' : _ -> do
+          xs' <- path p p' m
+          Just $ q : xs'
+        [] -> Nothing

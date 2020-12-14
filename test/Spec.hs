@@ -14,9 +14,9 @@ main = do
   geometryTests
   operatorTests
   machineTests
+  GraphUtilsTests
   blueprintTests
   wireTests
   resourceUpdateTests
   factoryTests
   blueprintParsingTests
-  GraphUtilsTests
