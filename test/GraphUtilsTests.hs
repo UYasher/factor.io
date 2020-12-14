@@ -28,30 +28,39 @@ testBlueprintToGraph =
   TestList
     [ blueprintToGraph tb0
         ~?= Graph
-          ( Map.fromList
-              [ (0, [1, 2]),
-                (1, [0, 3]),
-                (2, [0, 3]),
-                (3, [1, 2])
-              ]
+          ( Set.fromList
+              <$> Map.fromList
+                ( [ (0, [1, 2]),
+                    (1, [0, 3]),
+                    (2, [0, 3]),
+                    (3, [1, 2])
+                  ] ::
+                    [(Int, [Int])]
+                )
           ),
       blueprintToGraph tb1
         ~?= Graph
-          ( Map.fromList
-              [ (0, [1, 2]),
-                (1, [3]),
-                (2, [0, 3]),
-                (3, [1, 2])
-              ]
+          ( Set.fromList
+              <$> Map.fromList
+                ( [ (0, [1, 2]),
+                    (1, [3]),
+                    (2, [0, 3]),
+                    (3, [1, 2])
+                  ] ::
+                    [(Int, [Int])]
+                )
           ),
       blueprintToGraph tb2
         ~?= Graph
-          ( Map.fromList
-              [ (0, [1, 2]),
-                (1, [0, 3]),
-                (2, [3]),
-                (3, [1, 2])
-              ]
+          ( Set.fromList
+              <$> Map.fromList
+                ( [ (0, [1, 2]),
+                    (1, [0, 3]),
+                    (2, [3]),
+                    (3, [1, 2])
+                  ] ::
+                    [(Int, [Int])]
+                )
           )
     ]
 
@@ -71,5 +80,36 @@ tb1 = placeMachineAt (Point 0 0) (Wire Horizontal) tb0
 tb2 :: Blueprint
 tb2 = placeMachineAt (Point 0 0) (Wire Vertical) tb0
 
-prop_pointIntConversion :: Blueprint -> Bool
-prop_pointIntConversion b = all (\p -> (intToPoint b . pointToInt b) p == p) (allPoints b)
+prop_pointToIntIsInvertible :: Blueprint -> Bool
+prop_pointToIntIsInvertible b = all (\p -> (intToPoint b . pointToInt b) p == p) (allPoints b)
+
+prop_transposeIsInvolution :: Graph -> Bool
+prop_transposeIsInvolution g = (transpose . transpose) g == g
+
+prop_dfsAfterDfsIsStable :: Graph -> Int -> Property
+prop_dfsAfterDfsIsStable g x = (x `GraphUtils.elem` g) ==> g' == dfsFrom (transpose g') x
+  where
+    g' = dfsFrom g x
+
+prop_bfsAfterBfsIsStable :: Graph -> Int -> Property
+prop_bfsAfterBfsIsStable g x = (x `GraphUtils.elem` g) ==> g' == bfsFrom (transpose g') x
+  where
+    g' = bfsFrom g x
+
+prop_dfsProducesSubgraph :: Graph -> Int -> Property
+prop_dfsProducesSubgraph g x = (x `GraphUtils.elem` g) ==> g' `isSubgraph` g
+  where
+    g' = transpose $ dfsFrom g x
+
+prop_bfsProducesSubgraph :: Graph -> Int -> Property
+prop_bfsProducesSubgraph g x = (x `GraphUtils.elem` g) ==> g' `isSubgraph` g
+  where
+    g' = transpose $ bfsFrom g x
+
+prop_bfsElemsEqualDfsElems :: Graph -> Int -> Property
+prop_bfsElemsEqualDfsElems g x = (x `GraphUtils.elem` g) ==> GraphUtils.elems b == GraphUtils.elems d
+  where
+    b = bfsFrom g x
+    d = dfsFrom g x
+
+-- Need to add arbitrary instances for graphs
