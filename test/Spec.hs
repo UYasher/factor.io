@@ -2,6 +2,7 @@ import BlueprintParsingTests
 import BlueprintTests
 import FactoryTests
 import GeometryTests
+import GraphUtilsTests
 import Lib
 import MachineTests
 import OperatorTests
@@ -18,3 +19,4 @@ main = do
   resourceUpdateTests
   factoryTests
   blueprintParsingTests
+  GraphUtilsTests

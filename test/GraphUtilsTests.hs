@@ -13,6 +13,23 @@ import Test.HUnit
 import Test.QuickCheck
 import Wire
 
+graphUtilsTests :: IO ()
+graphUtilsTests = do
+  putStrLn "Running GraphUtilsTests.hs..."
+  aux
+  putStrLn ""
+  where
+    aux = do
+      runTestTT testBlueprintToGraph
+      quickCheck prop_pointToIntIsInvertible
+      quickCheck prop_transposeIsInvolution
+      quickCheck prop_dfsAfterDfsIsStable
+      quickCheck prop_bfsAfterBfsIsStable
+      quickCheck prop_dfsProducesSubgraph
+      quickCheck prop_bfsProducesSubgraph
+      quickCheck prop_bfsElemsEqualDfsElems
+      quickCheck prop_bfsPathLength
+
 instance Arbitrary Blueprint where
   arbitrary = do
     width <- abs <$> arbitrary
@@ -22,6 +39,15 @@ instance Arbitrary Blueprint where
     let base = blankBlueprint width height
     withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
     return withMachines {fixedPoints = fixed}
+
+instance Arbitrary Graph where
+  arbitrary = do
+    numNodes <- abs <$> arbitrary :: Gen Int
+    let f _ = do
+          h <- (fmap . fmap) (\x -> choose (0, numNodes)) (arbitrary :: Gen [Int])
+          let h' = sequence h
+          Set.fromList <$> h'
+    (Graph <$>) . sequence $ Prelude.foldr (\x m -> Map.insert x (f x) m) Map.empty [0 .. numNodes]
 
 testBlueprintToGraph :: Test
 testBlueprintToGraph =
@@ -112,4 +138,10 @@ prop_bfsElemsEqualDfsElems g x = (x `GraphUtils.elem` g) ==> GraphUtils.elems b 
     b = bfsFrom g x
     d = dfsFrom g x
 
--- Need to add arbitrary instances for graphs
+-- | A test serving as a proxy for the shortest path property of bfs
+-- Note: this property runs very close to the 1000 example limit for quickCheck
+-- you may need to run it a couple of times before passing without timing out.
+prop_bfsPathLength :: Graph -> Int -> Int -> Property
+prop_bfsPathLength g x y =
+  (x `GraphUtils.elem` g) && (y `GraphUtils.elem` g)
+    ==> (Set.size . GraphUtils.elems $ bfsFrom (bfsFrom (transpose g) x) y) == (Set.size . GraphUtils.elems $ bfsFrom (bfsFrom g y) x)
