@@ -1,6 +1,7 @@
 module GraphUtilsTests where
 
 import Blueprint
+import Budget
 import Control.Monad
 import Data.Map as Map
 import Data.Maybe
@@ -97,6 +98,7 @@ tb0 =
     { fixedPoints = Set.fromList [],
       grid = Map.empty,
       minimumSinksToSatisfy = 0,
+      budget = zeroBudget,
       width = 2,
       height = 2
     }
