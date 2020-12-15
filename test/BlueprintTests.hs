@@ -146,17 +146,18 @@ addSourceAbove p b = do placeMachineAt (p +>> Point 0 1) <$> (Source . (`mod` 64
 connectOutputToOneOf :: Blueprint -> Point -> [Point] -> Gen Blueprint
 connectOutputToOneOf b pSource ys = if Prelude.null reachable then pure b else Prelude.foldr placeWire b <$> wiresToAdd
   where
-    p = pSource ->> Point 0 (-1)
+    p = pSource +>> Point 0 (-1)
     bfsTree = bfsFrom (blueprintToGraph b) (pointToInt b p)
     reachable = Prelude.filter (\p' -> pointToInt b p' `GraphUtils.elem` bfsTree) $ (+>> Point 0 1) <$> ys
-    shortestPathInBlueprint q = intToPoint b <$> fromJust ((pointToInt b p ~> pointToInt b (q +>> Point 0 1)) bfsTree)
-    connection = shortestPathInBlueprint <$> elements reachable
+    shortestPathInBlueprint q = intToPoint b <$> fromJust ((pointToInt b p ~> pointToInt b q) bfsTree)
+    connection = (\t -> (p +>> Point 0 1) : shortestPathInBlueprint t ++ [t ->> Point 0 1]) <$> elements reachable
     wiresToAdd = Prelude.map tripleToWireType . toTriples <$> connection
-    placeWire (p, w) b@Blueprint {grid = g} = placeMachineAt p wire b
-      where
-        wire = case Map.lookup p g of
-          Nothing -> Wire w
-          Just _ -> Wire Overlap
+
+placeWire (p, w) b@Blueprint {grid = g} = placeMachineAt p wire b
+  where
+    wire = case Map.lookup p g of
+      Nothing -> Wire w
+      Just _ -> Wire Overlap
 
 toTriples :: [a] -> [(a, a, a)]
 toTriples [x1, x2, x3] = [(x1, x2, x3)]
@@ -171,24 +172,24 @@ tripleToWireType (p1, p2, p3) =
       Point 0 1 -> case p2 ->> p3 of
         Point 0 1 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         Point 0 (-1) -> Vertical
-        Point 1 0 -> NE
-        Point (-1) 0 -> NW
+        Point 1 0 -> SW
+        Point (-1) 0 -> SE
         _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point 0 (-1) -> case p2 ->> p3 of
         Point 0 1 -> Vertical
         Point 0 (-1) -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
-        Point 1 0 -> SE
-        Point (-1) 0 -> SW
+        Point 1 0 -> NW
+        Point (-1) 0 -> NE
         _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point 1 0 -> case p2 ->> p3 of
-        Point 0 1 -> NE
-        Point 0 (-1) -> SE
+        Point 0 1 -> SW
+        Point 0 (-1) -> NW
         Point 1 0 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         Point (-1) 0 -> Horizontal
         _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point (-1) 0 -> case p2 ->> p3 of
-        Point 0 1 -> NW
-        Point 0 (-1) -> SW
+        Point 0 1 -> SE
+        Point 0 (-1) -> NE
         Point 1 0 -> Horizontal
         Point (-1) 0 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
