@@ -67,7 +67,7 @@ isOp m = case m of
   _ -> False
 
 openOutputs :: Blueprint -> [Point]
-openOutputs b@Blueprint {grid = g} = Prelude.filter (\p -> isMakingResource p && (not . connectsToWire) p) outputList
+openOutputs b@Blueprint {grid = g} = if isJust $ makeFactory b then Prelude.filter (\p -> isMakingResource p && (not . connectsToWire) p) outputList else []
   where
     r = getBoardResources b
     ops = Map.filter isOp g
@@ -88,7 +88,7 @@ testOpenOutputs =
     ]
 
 openInputs :: Blueprint -> [Point]
-openInputs b@Blueprint {grid = g} = Prelude.filter (not . isGettingResource) inputList
+openInputs b@Blueprint {grid = g} = if isJust $ makeFactory b then Prelude.filter (not . isGettingResource) inputList else []
   where
     r = getBoardResources b
     ops = Map.filter isOp g
@@ -203,8 +203,8 @@ connectBlueprint b = do
     xs@(_ : _) -> case openInputs b' of
       ys@(_ : _) ->
         frequency
-          [ (1, placeSinksAtOpenOutputs <$> b), -- Not sure these two methods make sense
-            (10, connectBlueprint . join $ connectOutputToOneOf <$> b <*> elements xs <*> pure ys) -- Why doesn't running blueprintTests.hs seem to ever reach this line?
+          [ (1, placeSinksAtOpenOutputs <$> b),
+            (10, connectBlueprint . join $ connectOutputToOneOf <$> b <*> elements xs <*> pure ys)
           ]
       [] -> placeSinksAtOpenOutputs <$> b
     [] -> case openInputs b' of
@@ -212,8 +212,8 @@ connectBlueprint b = do
         frequency
           [ (1, placeSinksAtOpenOutputs <$> b),
             (10, connectBlueprint (addSourceAbove p b))
-          ] -- Don't we actually want a random open input point?
-      [] -> b -- Reaches this line
+          ]
+      [] -> b
 
 fixSinksAndSources :: Blueprint -> Blueprint
 fixSinksAndSources b@Blueprint {grid = g, fixedPoints = ps} = b {fixedPoints = ps'}
