@@ -3,6 +3,7 @@ module GraphUtilsTests where
 import Blueprint
 import Control.Monad
 import Data.Map as Map
+import Data.Maybe
 import Data.Set as Set
 import Geometry
 import GeometryTests
@@ -105,6 +106,36 @@ tb1 = placeMachineAt (Point 0 0) (Wire Horizontal) tb0
 
 tb2 :: Blueprint
 tb2 = placeMachineAt (Point 0 0) (Wire Vertical) tb0
+
+graphMaintainsAdjacency :: Graph -> Blueprint -> Bool
+graphMaintainsAdjacency (Graph m) b =
+  all
+    ( \k ->
+        all
+          (isAdjacent b (intToPoint b k) . intToPoint b)
+          (Set.toList . fromJust $ Map.lookup k m)
+    )
+    (Map.keys m)
+
+prop_blueprintToGraphMaintainsAdjacency :: Blueprint -> Bool
+prop_blueprintToGraphMaintainsAdjacency b = graphMaintainsAdjacency (blueprintToGraph b) b
+
+prop_bfsOfBlueprintMaintainsAdjacency :: Blueprint -> Int -> Property
+prop_bfsOfBlueprintMaintainsAdjacency b x = (x `GraphUtils.elem` g) ==> graphMaintainsAdjacency g' b
+  where
+    g = blueprintToGraph b
+    g' = bfsFrom g x
+
+prop_pathOfBlueprintMaintainsAdjacency :: Blueprint -> Int -> Int -> Property
+prop_pathOfBlueprintMaintainsAdjacency b x y =
+  (x `GraphUtils.elem` g) && (y `GraphUtils.elem` g') && isJust path
+    ==> all (\(v1, v2) -> isAdjacent b (intToPoint b v1) (intToPoint b v2) || v1 == v2) (toDoubles $ fromJust path)
+  where
+    g = blueprintToGraph b
+    g' = bfsFrom g x
+    path = (x ~> y) g'
+    toDoubles [x1, x2] = [(x1, x2)]
+    toDoubles (x1 : x2 : xs) = (x1, x2) : toDoubles (x2 : xs)
 
 prop_pointToIntIsInvertible :: Blueprint -> Bool
 prop_pointToIntIsInvertible b = all (\p -> (intToPoint b . pointToInt b) p == p) (allPoints b)

@@ -48,14 +48,14 @@ getBoardResources b@Blueprint {height = h, width = w} = stepUntilStableOrN (h * 
 
 blueprintOfOps :: Gen Blueprint
 blueprintOfOps = do
-  width <- (3 +) . abs <$> arbitrary
-  height <- (3 +) . abs <$> arbitrary
-  operators <- (arbitrary `suchThat` (\l -> length l > 10) :: Gen [Operator]) -- not sure 10 is the right number. Maybe a function of height and width?
+  width <- (6 +) . abs <$> arbitrary
+  height <- (6 +) . abs <$> arbitrary
+  operators <- (arbitrary `suchThat` (\l -> length l > 2) :: Gen [Operator]) -- not sure 10 is the right number. Maybe a function of height and width?
   let machines = Op <$> operators
   fixed <- elements [Set.empty :: Set Point]
   let base = blankBlueprint width height
   -- subtracting from and adding to the height allows us to guarantee that all inputs/outputs are reachable
-  let placeInBounds = placeMachineAt . (+>> Point 0 1) . wrapInBounds width (height - 3)
+  let placeInBounds = placeMachineAt . (+>> Point 0 2) . wrapInBounds width (height - 4)
   points <- (arbitrary `suchThat` (\l -> length l == length machines) :: Gen [Point])
   let addCMDs = zipWith ($) (Prelude.map placeInBounds points) machines
   let withMachines = Prelude.foldr (\m b -> m b) base addCMDs
@@ -144,11 +144,12 @@ addSourceAbove :: Point -> Gen Blueprint -> Gen Blueprint
 addSourceAbove p b = do placeMachineAt (p +>> Point 0 1) <$> (Source . (`mod` 64) <$> arbitrary) <*> b
 
 connectOutputToOneOf :: Blueprint -> Point -> [Point] -> Gen Blueprint
-connectOutputToOneOf b p ys = Prelude.foldr placeWire b <$> wiresToAdd
+connectOutputToOneOf b pSource ys = if Prelude.null reachable then pure b else Prelude.foldr placeWire b <$> wiresToAdd
   where
+    p = pSource ->> Point 0 (-1)
     bfsTree = bfsFrom (blueprintToGraph b) (pointToInt b p)
-    reachable = Prelude.filter (\p -> pointToInt b p `GraphUtils.elem` bfsTree) ys
-    shortestPathInBlueprint q = intToPoint b <$> fromJust ((pointToInt b p ~> pointToInt b q) bfsTree)
+    reachable = Prelude.filter (\p' -> pointToInt b p' `GraphUtils.elem` bfsTree) $ (+>> Point 0 1) <$> ys
+    shortestPathInBlueprint q = intToPoint b <$> fromJust ((pointToInt b p ~> pointToInt b (q +>> Point 0 1)) bfsTree)
     connection = shortestPathInBlueprint <$> elements reachable
     wiresToAdd = Prelude.map tripleToWireType . toTriples <$> connection
     placeWire (p, w) b@Blueprint {grid = g} = placeMachineAt p wire b
@@ -168,30 +169,30 @@ tripleToWireType (p1, p2, p3) =
   ( p2,
     case p2 ->> p1 of
       Point 0 1 -> case p2 ->> p3 of
-        Point 0 1 -> error "Wire cannot enter and exit same point"
+        Point 0 1 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         Point 0 (-1) -> Vertical
         Point 1 0 -> NE
         Point (-1) 0 -> NW
-        _ -> error "Non-adjacent wire triple"
+        _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point 0 (-1) -> case p2 ->> p3 of
         Point 0 1 -> Vertical
-        Point 0 (-1) -> error "Wire cannot enter and exit same point"
+        Point 0 (-1) -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         Point 1 0 -> SE
         Point (-1) 0 -> SW
-        _ -> error "Non-adjacent wire triple"
+        _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point 1 0 -> case p2 ->> p3 of
         Point 0 1 -> NE
         Point 0 (-1) -> SE
-        Point 1 0 -> error "Wire cannot enter and exit same point"
+        Point 1 0 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
         Point (-1) 0 -> Horizontal
-        _ -> error "Non-adjacent wire triple"
+        _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
       Point (-1) 0 -> case p2 ->> p3 of
         Point 0 1 -> NW
         Point 0 (-1) -> SW
         Point 1 0 -> Horizontal
-        Point (-1) 0 -> error "Wire cannot enter and exit same point"
-        _ -> error "Non-adjacent wire triple"
-      _ -> error "Non-adjacent wire triple"
+        Point (-1) 0 -> error $ "Wire cannot enter and exit same point: " ++ show (p1, p2, p3)
+        _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
+      _ -> error $ "Non-adjacent wire triple: " ++ show (p1, p2, p3)
   )
 
 connectBlueprint :: Gen Blueprint -> Gen Blueprint
