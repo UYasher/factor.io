@@ -40,7 +40,7 @@ clearUIState uis = uis {bp = b, cr = r}
 
 data Tick = Tick
 
-data Layer = Menu | Debug -- | Campaign | LevelSelect
+data Layer = Menu | Debug | Quit -- | Campaign | LevelSelect
   deriving (Eq, Ord)
 
 data Name = Board | Run | Random | Select {name :: Machine} | Move {to :: Layer}

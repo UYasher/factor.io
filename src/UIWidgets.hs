@@ -33,13 +33,12 @@ renderUI uis@UIState {cl = l} =
 menu :: Widget Name
 menu =
   C.center
-    ( C.hCenter (str title)
-        <=> C.hCenter
-          ( padTop (Pad 3) $ clickable (Move Debug) (button "Sandbox Mode")
-          )
-        <=> C.hCenter
-          (padTop (Pad 1) $ button "Credits")
+    ( (C.hCenter . padBottom (Pad 2) $ str title)
+        <=> centerPad ((clickable $ Move Debug) (button "Sandbox Mode"))
+        <=> centerPad ((clickable $ Move Quit) (button "Quit"))
     )
+  where
+    centerPad = C.hCenter . padTop (Pad 1)
 
 button :: String -> Widget Name
 button s = addBorder "" . vLimit 3 . hLimit 50 . C.center $ str s

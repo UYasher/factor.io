@@ -29,7 +29,7 @@ keyEvent uis@(UIState b _ _ ss cl hl) (VtyEvent (EvKey (KChar c) [])) =
     _ -> continue uis
 
 mouseEvent :: UIState -> BrickEvent Name Tick -> EventM Name (Next UIState)
-mouseEvent uis (MouseDown (Move Debug) BLeft _ _) = continue $ uis {cl = Debug}
+mouseEvent uis (MouseUp (Move l) (Just BLeft) _) = uis `moveTo` l
 mouseEvent uis@UIState {bp = b} (MouseDown Board BRight _ l) =
   continue $ uis {hl = [tf l], bp = removeMachineAt (tf l) b}
 mouseEvent uis@UIState {hl = pw} (MouseUp Board (Just BRight) l) =
@@ -37,11 +37,7 @@ mouseEvent uis@UIState {hl = pw} (MouseUp Board (Just BRight) l) =
 mouseEvent uis@UIState {sm = (Just (Wire _))} (MouseDown Board BLeft _ l) =
   continue $ addPrewire (tf l) uis
 mouseEvent
-  uis@UIState
-    { bp = b,
-      hl = p,
-      sm = (Just (Wire _))
-    }
+  uis@(UIState b (Just (Wire _)) _ _ _ p)
   (MouseUp Board (Just BLeft) l) =
     continue $ uis {bp = b', hl = []}
     where
@@ -54,6 +50,12 @@ mouseEvent _ (MouseUp Random (Just BLeft) _) =
 mouseEvent uis@UIState {bp = b, sm = p, cl = l} (MouseUp Run (Just BLeft) _) =
   continue $ uis {cr = emptyResources, ss = "Running"}
 mouseEvent uis _ = continue uis
+
+moveTo :: UIState -> Layer -> EventM Name (Next UIState)
+moveTo uis l =
+  case l of
+    Debug -> continue $ uis {cl = Debug}
+    Quit -> halt uis
 
 addPrewire :: Point -> UIState -> UIState
 addPrewire p' uis@UIState {hl = []} = uis {hl = [p']}
