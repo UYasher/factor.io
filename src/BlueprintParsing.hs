@@ -10,7 +10,7 @@ import Operator
 import Text.Read
 import Wire
 
--- this code is messy and hacky and should be rewritten for production
+-- this code is messy, hacky, and not intended for production use
 -- it mostly aids in writing complex test cases and visualizing things for debugging
 -- it includes partial functions. use at your peril.
 

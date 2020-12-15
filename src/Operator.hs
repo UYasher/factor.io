@@ -5,7 +5,7 @@ import Geometry
 -- | `Operator`'s manipulate numbers to produce new numbers. There is a fixed
 -- number, with pre-defined behavior
 data Operator = Add | Subtract | Multiply | Divide | Modulo | Factor | Duplicate
-  deriving (Eq, Show)
+  deriving (Eq, Show, Read, Ord, Enum, Bounded)
 
 -- | Converts an operator into a function that will manipulate numbers in
 -- the "correct" way. (eg, the `Add` function adds its operands)
@@ -42,7 +42,8 @@ opOutputs Modulo = [Point 0 (-1)]
 opOutputs Factor = [Point (-1) 0, Point 1 0]
 opOutputs Duplicate = [Point (-1) 0, Point 1 0]
 
--- | `opToChar` returns the graphical character to be displayed to represent the given operator
+-- | `opToChar` returns the graphical character to be displayed to represent the given operator.
+-- For internal use only.
 opToChar :: Operator -> Char
 opToChar Add = '+'
 opToChar Subtract = '-'
@@ -51,3 +52,13 @@ opToChar Divide = '/'
 opToChar Modulo = '%'
 opToChar Factor = 'F'
 opToChar Duplicate = 'D'
+
+-- | Returns `the string to use as the field for this `Operator` in a `Budget`,
+opBudgetField :: Operator -> String
+opBudgetField Add = "add"
+opBudgetField Subtract = "subtract"
+opBudgetField Multiply = "multiply"
+opBudgetField Divide = "divide"
+opBudgetField Modulo = "modulo"
+opBudgetField Factor = "factor"
+opBudgetField Duplicate = "duplicate"

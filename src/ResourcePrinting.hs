@@ -7,6 +7,11 @@ import Geometry
 import Machine
 import ResourceUpdate
 import State
+<<<<<<< HEAD
+=======
+
+-- This file is for internal debugging use only. It (arcanely) converts `Resources` into a string
+>>>>>>> cc2a728c64884d59e54a6d172f416e8b2058e682
 
 resourcesToString :: Int -> Int -> Resources -> String
 resourcesToString width height r = unlines $ map (\h -> rtsLine width h r) [height - 1, height - 2 .. 0]

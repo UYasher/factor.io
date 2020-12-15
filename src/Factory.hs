@@ -1,3 +1,6 @@
+-- Ideally, this export list would apply, but there are some internal methods that
+-- we want to expose just for testing purposes
+
 -- module Factory (Factory, makeFactory, step, isStabilized, stepUntilStableOrN) where
 module Factory where
 
@@ -13,6 +16,8 @@ import ResourceUpdate
 import State
 import Wire
 
+-- | The intuition behind this type alias is that a `Factory` takes `Resources`,
+-- makes new `Resources` (by stepping), and returns no useful value otherwise
 type Factory = State Resources ()
 
 -- | Converts a `Blueprint` into `Just` a `Factory`, or `Nothing` in the case of
@@ -20,6 +25,23 @@ type Factory = State Resources ()
 makeFactory :: Blueprint -> Maybe Factory
 makeFactory Blueprint {grid = g} =
   processWires g >>= Just . (>> processNonWires g)
+
+-- | Runs the factory simulation for one step
+step :: Factory -> Resources -> Resources
+step = execState
+
+-- | Returns `True` if running the factory on the given resources produces no change
+isStabilized :: Factory -> Resources -> Bool
+isStabilized f r = r == step f r
+
+-- | Runs the factory simulation for at most `n` steps, or until it's stabilized
+stepUntilStableOrN :: Int -> Factory -> Resources -> Resources
+stepUntilStableOrN n _ r | n <= 0 = r
+stepUntilStableOrN _ f r | isStabilized f r = r
+stepUntilStableOrN n f r = stepUntilStableOrN (n - 1) f $ step f r
+
+-- All code below here is just the implementation of the ideas specified above.
+-- External files should not use any declaration below here.
 
 -- | Temporary data type that helps talk about a specific place in a Resource map
 data Coord = Horiz Point | Vert Point deriving (Eq, Ord)
@@ -50,16 +72,25 @@ processWires :: Grid Machine -> Maybe Factory
 -- there's a wire snake that connects two outputs of machines, which is illegal.
 -- Otherwise, we can sequence together the "factory" of each wire snake
 processWires g =
-  let snakes = map (processWireSnake g) $ getWireSnakeHeads g
+  let snakes = map (processWireSnake g) $ filterOutNonNorthWireSnakeHeads g (getCandidateWireSnakeHeads g)
    in if anySame (snakes >>= snd) then Nothing else Just $ mapM_ fst snakes
   where
     anySame :: Ord a => [a] -> Bool
     anySame xs = Set.size (Set.fromList xs) < length xs
 
+-- | Filters out any wire snake heads that start with wires that don't connect North
+filterOutNonNorthWireSnakeHeads :: Grid Machine -> [Point] -> [Point]
+filterOutNonNorthWireSnakeHeads g = filter aux
+  where
+    aux :: Point -> Bool
+    aux p = case Map.lookup p g of
+      Just (Wire w) -> connectsToNorth w
+      _ -> True
+
 -- | Returns a list of points that could be the start of a wire snake
 -- (ie, is below a Source or is in below the output of some Operator)
-getWireSnakeHeads :: Grid Machine -> [Point]
-getWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
+getCandidateWireSnakeHeads :: Grid Machine -> [Point]
+getCandidateWireSnakeHeads g = filter (g `isOutput`) (Map.keys g)
   where
     isOutput :: Grid Machine -> Point -> Bool
     isOutput g p =
@@ -88,7 +119,7 @@ processWireSnake g p = aux g (p +>> Point 0 1) p
                in -- Notice: we create wire delay by sequencing the tail of the snake
                   -- before the head, so that signals can only travel one segment per step
                   combine (aux g cur newPoint) (wireToFactory dir prev cur, currentCoord)
-            _ -> (return (), [currentCoord])
+            _ -> (return (), [])
 
     combine :: (Factory, [Coord]) -> (Factory, Coord) -> (Factory, [Coord])
     combine (f1, c1) (f2, c2) = (f1 >> f2, c2 : c1)
@@ -134,17 +165,3 @@ processNonWires g = mapM_ aux (Map.toList g)
       setVert p v
     aux (_, Occupied) = return ()
     aux (_, Wire _) = return ()
-
--- | Runs the factory simulation for one step
-step :: Factory -> Resources -> Resources
-step = execState
-
--- | Returns `True` if running the factory on the given resources produces no change
-isStabilized :: Factory -> Resources -> Bool
-isStabilized f r = r == step f r
-
--- | Runs the factory simulation for at most `n` steps, or until it's stabilized
-stepUntilStableOrN :: Int -> Factory -> Resources -> Resources
-stepUntilStableOrN n _ r | n <= 0 = r
-stepUntilStableOrN _ f r | isStabilized f r = r
-stepUntilStableOrN n f r = stepUntilStableOrN (n - 1) f $ step f r
