@@ -89,9 +89,9 @@ prop_stepUnitaryOperator op (BI x) =
 testGetWireSnakeHeads :: Test
 testGetWireSnakeHeads =
   TestList
-    [ Set.fromList (getWireSnakeHeads g1) ~?= Set.fromList [Point 2 2, Point 4 2, Point 3 5, Point 2 7, Point 4 7],
-      Set.fromList (getWireSnakeHeads g2) ~?= Set.fromList [Point 1 0],
-      Set.fromList (getWireSnakeHeads g3) ~?= Set.fromList [Point 0 4]
+    [ Set.fromList (getCandidateWireSnakeHeads g1) ~?= Set.fromList [Point 2 2, Point 4 2, Point 3 5, Point 2 7, Point 4 7],
+      Set.fromList (getCandidateWireSnakeHeads g2) ~?= Set.fromList [Point 1 0],
+      Set.fromList (getCandidateWireSnakeHeads g3) ~?= Set.fromList [Point 0 4]
     ]
   where
     g1 = grid . fromJust $ stringToBlueprint blueprint1

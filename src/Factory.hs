@@ -1,3 +1,6 @@
+-- Ideally, this export list would apply, but there are some internal methods that
+-- we want to expose just for testing purposes
+
 -- module Factory (Factory, makeFactory, step, isStabilized, stepUntilStableOrN) where
 module Factory where
 
@@ -13,6 +16,8 @@ import ResourceUpdate
 import State
 import Wire
 
+-- | The intuition behind this type alias is that a `Factory` takes `Resources`,
+-- makes new `Resources` (by stepping), and returns no useful value otherwise
 type Factory = State Resources ()
 
 -- | Converts a `Blueprint` into `Just` a `Factory`, or `Nothing` in the case of
@@ -20,6 +25,23 @@ type Factory = State Resources ()
 makeFactory :: Blueprint -> Maybe Factory
 makeFactory Blueprint {grid = g} =
   processWires g >>= Just . (>> processNonWires g)
+
+-- | Runs the factory simulation for one step
+step :: Factory -> Resources -> Resources
+step = execState
+
+-- | Returns `True` if running the factory on the given resources produces no change
+isStabilized :: Factory -> Resources -> Bool
+isStabilized f r = r == step f r
+
+-- | Runs the factory simulation for at most `n` steps, or until it's stabilized
+stepUntilStableOrN :: Int -> Factory -> Resources -> Resources
+stepUntilStableOrN n _ r | n <= 0 = r
+stepUntilStableOrN _ f r | isStabilized f r = r
+stepUntilStableOrN n f r = stepUntilStableOrN (n - 1) f $ step f r
+
+-- All code below here is just the implementation of the ideas specified above.
+-- External files should not use any declaration below here.
 
 -- | Temporary data type that helps talk about a specific place in a Resource map
 data Coord = Horiz Point | Vert Point deriving (Eq, Ord)
@@ -143,17 +165,3 @@ processNonWires g = mapM_ aux (Map.toList g)
       setVert p v
     aux (_, Occupied) = return ()
     aux (_, Wire _) = return ()
-
--- | Runs the factory simulation for one step
-step :: Factory -> Resources -> Resources
-step = execState
-
--- | Returns `True` if running the factory on the given resources produces no change
-isStabilized :: Factory -> Resources -> Bool
-isStabilized f r = r == step f r
-
--- | Runs the factory simulation for at most `n` steps, or until it's stabilized
-stepUntilStableOrN :: Int -> Factory -> Resources -> Resources
-stepUntilStableOrN n _ r | n <= 0 = r
-stepUntilStableOrN _ f r | isStabilized f r = r
-stepUntilStableOrN n f r = stepUntilStableOrN (n - 1) f $ step f r

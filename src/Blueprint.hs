@@ -54,7 +54,8 @@ isAvailable :: Point -> Blueprint -> Bool
 isAvailable p b@Blueprint {grid = grid} =
   isEditable p b && p `Map.notMember` grid
 
--- | Displaces the machine at the first argument by the second argument
+-- | Displaces the `Machine` at the first argument by the second argument.
+-- Returns the same `Blueprint` if the modification is illegal.
 displaceMachineAt :: Point -> Point -> Blueprint -> Blueprint
 displaceMachineAt p d b =
   case getMachineAt p b of
@@ -64,9 +65,12 @@ displaceMachineAt p d b =
           b'' = placeMachineAt (p +>> d) m b'
        in if b == b' || b' == b'' || b == b'' then b else b''
 
+-- | Returns `Just` the `Machine` at the first argument in the `Blueprint`, or `Nothing`
 getMachineAt :: Point -> Blueprint -> Maybe Machine
 getMachineAt p Blueprint {grid = grid} = Map.lookup p grid
 
+-- | Places the second argument in the `Blueprint` at the first argument
+-- Returns the same `Blueprint` if the modification is illegal.
 placeMachineAt :: Point -> Machine -> Blueprint -> Blueprint
 placeMachineAt p m b@Blueprint {grid = grid}
   | not $ isEditable p b = b
@@ -83,6 +87,8 @@ placeMachineAt p m b@Blueprint {grid = grid}
 removeMachines :: Blueprint -> [Point] -> Blueprint
 removeMachines = foldr removeMachineAt
 
+-- | Removes the `Machine at the first argument argument in the `Blueprint`
+-- Returns the same `Blueprint` if the modification is illegal.
 removeMachineAt :: Point -> Blueprint -> Blueprint
 removeMachineAt p b@Blueprint {grid = grid}
   | not $ isEditable p b = b
@@ -100,7 +106,7 @@ removeMachineAt p b@Blueprint {grid = grid}
           hof = \p' -> Map.delete (p +>> p')
        in foldr ($) g changes
 
--- | Returns `True` iff the resources meet the goal specified by the blueprint
+-- | Returns `True` iff the resources meet the goal specified by the `Blueprint`
 isSatisfied :: Blueprint -> Resources -> Bool
 isSatisfied Blueprint {grid = grid, minimumSinksToSatisfy = n} r =
   sum (map (`aux` r) $ Map.toList grid) >= n
