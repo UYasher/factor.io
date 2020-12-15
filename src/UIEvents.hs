@@ -137,8 +137,8 @@ fakeRandomPuzzle :: Gen Blueprint
 fakeRandomPuzzle = do
   numIns <- elements [1, 2]
   numOuts <- elements [1, 2]
-  let sources = mapM (\_ -> Source <$> choose (0, 63)) [0 .. numIns]
-  let sinks = mapM (\_ -> Sink <$> choose (0, 63)) [0 .. numOuts]
+  let sources = mapM (\_ -> Source <$> choose (0, 63)) [0 .. numIns - 1]
+  let sinks = mapM (\_ -> Sink <$> choose (0, 63)) [0 .. numOuts - 1]
   let sourceLocations = [Point 2 14, Point 12 14]
   let sinkLocations = [Point 5 0, Point 10 0]
   let sourceFs = zipWith placeMachineAt sourceLocations <$> sources
