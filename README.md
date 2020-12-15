@@ -1,5 +1,5 @@
 # project-cis552
-By Maddy Adams (m20adams), NAME (PENNKEY), and NAME (PENNKEY)
+By Maddy Adams (m20adams), Makarios Chung (chungma), and NAME (PENNKEY)
 
 ## Project overview
 [Blueprint.hs](src/Blueprint.hs) defines the `Blueprint` datatype that user edits to try to solve the level.  
