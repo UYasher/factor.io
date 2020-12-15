@@ -1,7 +1,11 @@
 # project-cis552
-This is the initial README file for your project. You should update it as you
-see fit.
+By Maddy Adams (m20adams), NAME (PENNKEY), and NAME (PENNKEY)
 
+## Project overview
+[Blueprint.hs](src/Blueprint.hs) defines the `Blueprint` datatype that user edits to try to solve the level. 
+[Factory.hs](src/Factory.hs) provides a way of checking if a `Blueprint` solves a level by converting it into the `Factory` datatype, and then running multiple steps of the `Factory` simulation until the level is solved (or not). 
+[Machine.hs](src/Machine.hs) and [Operator.hs](src/Operator.hs) define datatypes that live in `Blueprint`s, such as a `Source` that creates values, or an `Add` that sums values. 
+[ResourceUpdate.hs](src/ResourceUpdate.hs) exposes a way for the `Factory` simulation to access and modify state through the `Resources` datatype. 
 
 ## Building, running, and testing
 
