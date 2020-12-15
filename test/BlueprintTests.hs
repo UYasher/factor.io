@@ -75,7 +75,7 @@ openOutputs b@Blueprint {grid = g} = if isJust $ makeFactory b then Prelude.filt
     isMakingResource p = isJust $ Map.lookup p (vertical r)
     connectsToWire p = case Map.lookup (p +>> Point 0 (-1)) g of
       Just w@(Wire _) -> connectsToNorth $ direction w
-      _ -> False -- error $ "Could not find wire at location " ++ show (p +>> Point 0 (-1)) ++ " instead found " ++ show (Map.lookup (p +>> Point 0 (-1)) g)
+      _ -> False
 
 testOpenOutputs :: Test
 testOpenOutputs =
@@ -237,25 +237,23 @@ getNumSinks Blueprint {grid = g} = Map.foldr (+) 0 $ Map.map sinkToInt g
       Sink _ -> 1
       _ -> 0
 
+solvableBlueprintGen :: Gen Blueprint
+solvableBlueprintGen = do
+  b <- blueprintOfOps
+  b' <- fixSinksAndSources <$> connectBlueprint (return b)
+  -- For some reason, the previous lines differ from doing: connectBlueprint blueprintOfOps
+  n <- choose (0, getNumSinks b')
+  return $ b' {minimumSinksToSatisfy = n}
+
 instance Arbitrary Blueprint where
   arbitrary = do
-    -- b <- removeUnfixed . fixSinksAndSources <$> connectBlueprint blueprintOfOps
-    -- b <- fixSinksAndSources <$> connectBlueprint blueprintOfOps
-    b <- blueprintOfOps
-    b' <- connectBlueprint $ return b
-    -- For some reason, the previous line differs from doing: connectBlueprint blueprintOfOps
-    n <- choose (0, getNumSinks b')
-    return $ b' {minimumSinksToSatisfy = n}
-
--- instance Arbitrary Blueprint where
---   arbitrary = do
---     width <- abs <$> arbitrary
---     height <- abs <$> arbitrary
---     machines <- arbitrary :: Gen [Machine]
---     fixed <- Set.fromList <$> (arbitrary :: Gen [Point])
---     let base = blankBlueprint width height
---     withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
---     return withMachines {fixedPoints = fixed}
+    width <- abs <$> arbitrary
+    height <- abs <$> arbitrary
+    machines <- arbitrary :: Gen [Machine]
+    fixed <- Set.fromList <$> (arbitrary :: Gen [Point])
+    let base = blankBlueprint width height
+    withMachines <- liftM3 Prelude.foldr (placeMachineAt <$> arbitrary) (return base) (return machines)
+    return withMachines {fixedPoints = fixed}
 
 -- Utility functions for asking
 
